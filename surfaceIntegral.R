@@ -16,9 +16,9 @@
 
 
 #the resolution of our grid
-res_lambda = 15
-res_psi = 15
-res_PHI = 15
+res_lambda = 9
+res_psi = 9
+res_PHI = 9
 
 #limits for the parameters
 max_lambda = pi/2
@@ -138,21 +138,27 @@ for(i_psi in 0:res_psi){
 
 			#if the integration origin is inside the circular area, we have to be careful how the integration limits are set
 			if(psi<=lambda){
+
+				if(PHI==0) phi=pi
+
 				#calculations for concave arcs (will not really be used, because we will not have any)
-				A=0
-				if(phi>pi/2){
-					A = A + abs(integrate(arcConcave,lower=0,upper=phi,psi=psi,lambda=lambda)$val)
-				}
-				else{
-					A = A + abs(integrate(arcConcave,lower=0,upper=pi/2,psi=psi,lambda=lambda)$val)
-					A = A + abs(integrate(arcConvex,lower=pi/2,upper=phi,psi=psi,lambda=lambda)$val)
-				}
-				dataConcave[i_PHI+1, i_psi+1, i_lambda+1] = A
+#
+#				A=0
+#				if(phi>=pi/2){
+#					A = A + abs(integrate(arcConcave,lower=0,upper=phi,psi=psi,lambda=lambda)$val)
+#				}
+#				else
+#				{
+#					A = A + abs(integrate(arcConcave,lower=0,upper=pi/2,psi=psi,lambda=lambda)$val)
+#					A = A + abs(integrate(arcConvex,lower=pi/2,upper=phi,psi=psi,lambda=lambda)$val)
+#				}
+#
+				dataConcave[i_PHI+1, i_psi+1, i_lambda+1] = 0
 
 
 				#calculations for convex arcs
 				A=0
-				if(phi<pi/2){
+				if(phi<=pi/2){
 					A = A + abs(integrate(arcConvex,lower=0,upper=phi,psi=psi,lambda=lambda)$val)
 				}
 				else{
