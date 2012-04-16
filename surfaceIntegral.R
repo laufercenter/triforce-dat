@@ -16,9 +16,9 @@
 
 
 #the resolution of our grid
-res_lambda = 9
-res_psi = 9
-res_PHI = 9
+res_lambda = 10
+res_psi = 10
+res_PHI = 10
 
 #limits for the parameters
 max_lambda = pi/2
@@ -26,7 +26,7 @@ max_psi = pi
 max_PHI = pi
 
 dimensions=3
-fd=0.01
+fd=0.0001
 
 #returns a rotation matrix around the Z axis for a certain angle theta
 rotz <- function(theta){
@@ -171,8 +171,6 @@ integralConcave <-function(PHI, psi, lambda){
 		else ip=phi
 		
 		A = A + abs(integrate(arcConcave,lower=0,upper=ip,psi=psi,lambda=lambda)$val)
-
-		dataConcave[i_PHI+1, i_psi+1, i_lambda+1] = A
 	}
 	A
 		
@@ -218,42 +216,58 @@ hessian <- function(integrator, PHI, psi, lambda, f){
 	res
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #empty grid data
-dataConvex = array(0,dim=c(res_PHI+1,res_psi+1,res_lambda))
-dataConcave = array(0,dim=c(res_PHI+1,res_psi+1,res_lambda))
+dataConvex = array(0,dim=c(res_PHI,res_psi,res_lambda))
+dataConcave = array(0,dim=c(res_PHI,res_psi,res_lambda))
 
-gradientsConvex = array(0,dim=c(dimensions, res_PHI+1,res_psi+1,res_lambda))
-hessiansConvex = array(0,dim=c(dimensions, dimensions, res_PHI+1,res_psi+1,res_lambda))
+gradientsConvex = array(0,dim=c(dimensions, res_PHI,res_psi,res_lambda))
+hessiansConvex = array(0,dim=c(dimensions, dimensions, res_PHI,res_psi,res_lambda))
 
-gradientsConcave = array(0,dim=c(dimensions, res_PHI+1,res_psi+1,res_lambda))
-hessiansConcave = array(0,dim=c(dimensions, dimensions, res_PHI+1,res_psi+1,res_lambda))
+gradientsConcave = array(0,dim=c(dimensions, res_PHI,res_psi,res_lambda))
+hessiansConcave = array(0,dim=c(dimensions, dimensions, res_PHI,res_psi,res_lambda))
 
 
 #iterate over psi angles
-for(i_psi in 0:res_psi){
+for(i_psi in 0:(res_psi-1)){
 	print(i_psi)
-	psi = max_psi*i_psi/res_psi
+	psi = max_psi*i_psi/(res_psi-1)
 
 	#iterate over lambda angles
-	for(i_lambda in 1:(res_lambda-1)){
+	for(i_lambda in 1:(res_lambda)){
 		lambda = max_lambda*i_lambda/res_lambda
 
 
-		for(i_PHI in 0:res_PHI){
-			PHI = max_PHI * i_PHI/res_PHI
+		for(i_PHI in 0:(res_PHI-1)){
+			PHI = max_PHI * i_PHI/(res_PHI-1)
 
 
 			dconv = integralConvex(PHI,psi,lambda)
 			dconc = integralConcave(PHI,psi,lambda)
 
-			dataConvex[i_PHI+1, i_psi+1, i_lambda+1] = dconv
-			dataConcave[i_PHI+1, i_psi+1, i_lambda+1] = dconc
+			dataConvex[i_PHI+1, i_psi+1, i_lambda] = dconv
+			dataConcave[i_PHI+1, i_psi+1, i_lambda] = dconc
 				
-			gradientsConvex[,i_PHI+1, i_psi+1, i_lambda+1] = gradient(integralConvex,PHI,psi,lambda)
-			gradientsConcave[,i_PHI+1, i_psi+1, i_lambda+1] = gradient(integralConcave,PHI,psi,lambda)
+			gradientsConvex[,i_PHI+1, i_psi+1, i_lambda] = gradient(integralConvex,PHI,psi,lambda)
+			gradientsConcave[,i_PHI+1, i_psi+1, i_lambda] = gradient(integralConcave,PHI,psi,lambda)
 
-			hessiansConvex[,,i_PHI+1, i_psi+1, i_lambda+1] = hessian(integralConvex, PHI, psi, lambda, dconv)
-			hessiansConcave[,,i_PHI+1, i_psi+1, i_lambda+1] = hessian(integralConcave, PHI, psi, lambda, dconc)
+			hessiansConvex[,,i_PHI+1, i_psi+1, i_lambda] = hessian(integralConvex, PHI, psi, lambda, dconv)
+			hessiansConcave[,,i_PHI+1, i_psi+1, i_lambda] = hessian(integralConcave, PHI, psi, lambda, dconc)
 
 		}
 	}
