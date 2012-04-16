@@ -242,19 +242,28 @@ hessiansConvex = array(0,dim=c(dimensions, dimensions, res_PHI,res_psi,res_lambd
 gradientsConcave = array(0,dim=c(dimensions, res_PHI,res_psi,res_lambda))
 hessiansConcave = array(0,dim=c(dimensions, dimensions, res_PHI,res_psi,res_lambda))
 
+headers=array(0,dim=c(dimensions,max(res_PHI,res_psi,res_lambda)))
 
 #iterate over psi angles
 for(i_psi in 0:(res_psi-1)){
 	print(i_psi)
 	psi = max_psi*i_psi/(res_psi-1)
 
+	headers[2,i_psi+1]=psi
+
 	#iterate over lambda angles
 	for(i_lambda in 1:(res_lambda)){
 		lambda = max_lambda*i_lambda/res_lambda
 
+		headers[3,i_lambda]=lambda
+
+
 
 		for(i_PHI in 0:(res_PHI-1)){
 			PHI = max_PHI * i_PHI/(res_PHI-1)
+
+			headers[1,i_PHI+1]=PHI
+
 
 
 			dconv = integralConvex(PHI,psi,lambda)
