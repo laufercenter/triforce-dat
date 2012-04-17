@@ -9,8 +9,9 @@ dist <- function(a,b){
 }
 
 TaylorConvex <- function(i_PHI, i_psi, i_lambda, x){
+	#print(c(i_PHI,i_psi,i_lambda,x))
 	p = c(headers[1,i_PHI], headers[2,i_psi], headers[3,i_lambda])
-	v = dataConvex[i_PHI, i_psi, i_lambda] + c(t(gradientsConvex[,i_PHI, i_psi, i_lambda]) %*% (x-p)) + 0.5 * c(t((x-p)) %*% hessiansConvex[,,i_PHI, i_psi, i_lambda] %*% (x-p))
+	v = dataConvex[i_PHI, i_psi, i_lambda] + c(t(gradientsConvex[,i_PHI, i_psi, i_lambda]) %*% (x-p)) + 0.5 *(c(t((x-p)) %*% hessiansConvex[,,i_PHI, i_psi, i_lambda] %*% (x-p)))
 	v
 }
 
@@ -69,17 +70,24 @@ interpolate <- function(x){
 	dst=array(0,dim=c(3))
 	for(i in 1:8){
 		a=all[,i]
-		v[i]=TaylorConvex(a[1],a[2],a[3],x)
+		if(a[1]>ncol(headers) || a[2]>ncol(headers) || a[3]>ncol(headers)){
+			v[i]=0
+			w[i]=0
+		}
+		else{
+	
+			v[i]=TaylorConvex(a[1],a[2],a[3],x)
 
-		#calculate weights
-		p = c(headers[1,a[1]], headers[2,a[2]], headers[3,a[3]])
-		#test <<- p
-		#print(p)
-		for(j in 1:3)
-			dst[j] = abs(p[j] - x[j])/abs(headers[j,2]-headers[j,1])
+			#calculate weights
+			p = c(headers[1,a[1]], headers[2,a[2]], headers[3,a[3]])
+			#test <<- p
+			#print(p)
+			for(j in 1:3)
+				dst[j] = abs(p[j] - x[j])/abs(headers[j,2]-headers[j,1])
 
-		#print(dst)
-		w[i]=1-max(dst)
+			#print(dst)
+			w[i]=1-max(dst)
+		}
 
 	}
 	#print(v)
@@ -94,25 +102,27 @@ interpolate <- function(x){
 		w[i] = w[i] / s
 		res = res + w[i] * v[i]
 	}
-	res = res / 8
+	#res = res / 8
 
 	res
 
 }
 
-
-
-x=c(0.2*pi, 0.2*pi, 0.2*pi)
-
+plb <- function(p){
 res=100
 a=array(0,dim=c(res))
 b=array(0,dim=c(res))
 
 for(i in 0:res){
-	v = (3/4)* pi * i/(res-1)
-	a[i]=interpolate(c(1.5,v,0.65))
+	v = pi * i/(res-1)
+	a[i]=interpolate(c(p,v,0.629))
 	b[i]=v
 }
+plot(a,ylim=c(0,4))
+}
+
+x=c(0.2*pi, 0.2*pi, 0.2*pi)
+
 
 #s = interpolate(x)
 

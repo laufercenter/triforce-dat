@@ -26,7 +26,7 @@ max_psi = pi
 max_PHI = pi
 
 dimensions=3
-fd=0.0001
+fd=0.01
 
 #returns a rotation matrix around the Z axis for a certain angle theta
 rotz <- function(theta){
@@ -178,32 +178,69 @@ integralConcave <-function(PHI, psi, lambda){
 }
 
 
-gradient <- function(integrator, PHI, psi, lambda){
+gradient <- function(integrator, PHI, psi, lambda, modePHI, modepsi, modelambda){
+
+	switch(modePHI, 
+		central={pfd_PHI=fd; nfd_PHI= -fd; cfd_PHI=0},
+		forward={pfd_PHI=2*fd; nfd_PHI=0; cfd_PHI=fd},
+		backward={pfd_PHI=0; nfd_PHI= -2*fd; cfd_PHI= -fd},
+	)
+	switch(modepsi, 
+		central={pfd_psi=fd; nfd_psi= -fd; cfd_psi=0},
+		forward={pfd_psi=2*fd; nfd_psi=0; cfd_psi=fd},
+		backward={pfd_psi=0; nfd_psi= -2*fd; cfd_psi= -fd},
+	)
+	switch(modelambda, 
+		central={pfd_lambda=fd; nfd_lambda= -fd; cfd_lambda=0},
+		forward={pfd_lambda=2*fd; nfd_lambda=0; cfd_lambda=fd},
+		backward={pfd_lambda=0; nfd_lambda= -2*fd; cfd_lambda= -fd},
+	)
+
+
 	res = array(0,dim=c(3))
-	res[1] = (integrator(PHI+fd, psi, lambda) - integrator(PHI-fd, psi, lambda))/(2*fd)
-	res[2] = (integrator(PHI, psi+fd, lambda) - integrator(PHI, psi-fd, lambda))/(2*fd)
-	res[3] = (integrator(PHI, psi, lambda+fd) - integrator(PHI, psi, lambda-fd))/(2*fd)
+	res[1] = (integrator(PHI+pfd_PHI, psi, lambda) - integrator(PHI+nfd_PHI, psi, lambda))/(2*fd)
+	res[2] = (integrator(PHI, psi+pfd_psi, lambda) - integrator(PHI, psi+nfd_psi, lambda))/(2*fd)
+	res[3] = (integrator(PHI, psi, lambda+pfd_lambda) - integrator(PHI, psi, lambda+nfd_lambda))/(2*fd)
 	res
 	
 }
 
 
 
-hessian <- function(integrator, PHI, psi, lambda, f){
+
+hessian <- function(integrator, PHI, psi, lambda, modePHI, modepsi, modelambda){
 	res = array(0,dim=c(3,3))
+
+	switch(modePHI, 
+		central={pfd_PHI=fd; nfd_PHI= -fd; cfd_PHI=0},
+		forward={pfd_PHI=2*fd; nfd_PHI=0; cfd_PHI=fd},
+		backward={pfd_PHI=0; nfd_PHI= -2*fd; cfd_PHI= -fd},
+	)
+	switch(modepsi, 
+		central={pfd_psi=fd; nfd_psi= -fd; cfd_psi=0},
+		forward={pfd_psi=2*fd; nfd_psi=0; cfd_psi=fd},
+		backward={pfd_psi=0; nfd_psi= -2*fd; cfd_psi= -fd},
+	)
+	switch(modelambda, 
+		central={pfd_lambda=fd; nfd_lambda= -fd; cfd_lambda=0},
+		forward={pfd_lambda=2*fd; nfd_lambda=0; cfd_lambda=fd},
+		backward={pfd_lambda=0; nfd_lambda= -2*fd; cfd_lambda= -fd},
+	)
+
+
 	#f PHI PHI
-	res[1,1] = (integrator(PHI+fd, psi, lambda) - 2*f + integrator(PHI-fd, psi, lambda))/fd^2
+	res[1,1] = (integrator(PHI+pfd_PHI, psi, lambda) - 2*integrator(PHI+cfd_PHI, psi, lambda) + integrator(PHI+nfd_PHI, psi, lambda))/fd^2
 	#f PHI psi
-	res[1,2] = (integrator(PHI+fd, psi+fd, lambda) - integrator(PHI+fd, psi-fd, lambda) - integrator(PHI-fd, psi+fd, lambda) + integrator(PHI-fd, psi-fd, lambda))/(4*fd^2)
+	res[1,2] = (integrator(PHI+pfd_PHI, psi+pfd_psi, lambda) - integrator(PHI+pfd_PHI, psi+nfd_psi, lambda) - integrator(PHI+nfd_PHI, psi+pfd_psi, lambda) + integrator(PHI+nfd_PHI, psi+nfd_psi, lambda))/(4*fd^2)
 	#f PHI lambda
-	res[1,3] = (integrator(PHI+fd, psi, lambda+fd) - integrator(PHI+fd, psi, lambda-fd) - integrator(PHI-fd, psi, lambda+fd) + integrator(PHI-fd, psi, lambda-fd))/(4*fd^2)
+	res[1,3] = (integrator(PHI+pfd_PHI, psi, lambda+pfd_lambda) - integrator(PHI+pfd_PHI, psi, lambda+nfd_lambda) - integrator(PHI+nfd_PHI, psi, lambda+pfd_lambda) + integrator(PHI+nfd_PHI, psi, lambda+nfd_lambda))/(4*fd^2)
 
 	#f psi PHI
 	res[2,1] = res[1,2]
 	#f psi psi
-	res[2,2] = (integrator(PHI, psi+fd, lambda) - 2*f + integrator(PHI, psi-fd, lambda))/fd^2
+	res[2,2] = (integrator(PHI, psi+pfd_psi, lambda) - 2*integrator(PHI, psi+cfd_psi, lambda) + integrator(PHI, psi+nfd_psi, lambda))/fd^2
 	#f psi lambda
-	res[2,3] = (integrator(PHI, psi+fd, lambda+fd) - integrator(PHI, psi+fd, lambda-fd) - integrator(PHI, psi-fd, lambda+fd) + integrator(PHI, psi-fd, lambda-fd))/(4*fd^2)
+	res[2,3] = (integrator(PHI, psi+pfd_psi, lambda+pfd_lambda) - integrator(PHI, psi+pfd_psi, lambda+nfd_lambda) - integrator(PHI, psi+nfd_psi, lambda+pfd_lambda) + integrator(PHI, psi+nfd_psi, lambda+nfd_lambda))/(4*fd^2)
 
 
 	#f lambda  PHI
@@ -211,14 +248,10 @@ hessian <- function(integrator, PHI, psi, lambda, f){
 	#f lambda psi
 	res[3,2] = res[2,3]
 	#f psi psi
-	res[3,3] = (integrator(PHI, psi, lambda+fd) - 2*f + integrator(PHI, psi, lambda-fd))/fd^2
+	res[3,3] = (integrator(PHI, psi, lambda+pfd_lambda) - 2*integrator(PHI, psi, lambda+cfd_lambda) + integrator(PHI, psi, lambda+nfd_lambda))/fd^2
 
 	res
 }
-
-
-
-
 
 
 
@@ -271,12 +304,25 @@ for(i_psi in 0:(res_psi-1)){
 
 			dataConvex[i_PHI+1, i_psi+1, i_lambda] = dconv
 			dataConcave[i_PHI+1, i_psi+1, i_lambda] = dconc
-				
-			gradientsConvex[,i_PHI+1, i_psi+1, i_lambda] = gradient(integralConvex,PHI,psi,lambda)
-			gradientsConcave[,i_PHI+1, i_psi+1, i_lambda] = gradient(integralConcave,PHI,psi,lambda)
+			modePHI="central"
+			modepsi="central"
+			modelambda="central"
 
-			hessiansConvex[,,i_PHI+1, i_psi+1, i_lambda] = hessian(integralConvex, PHI, psi, lambda, dconv)
-			hessiansConcave[,,i_PHI+1, i_psi+1, i_lambda] = hessian(integralConcave, PHI, psi, lambda, dconc)
+			if(i_PHI==0) modePHI="forward"
+			else if(i_PHI==(res_PHI-1)) modePHI="backward"
+			else modePHI="central"
+			if(i_psi==0) modepsi="forward"
+			else if(i_psi==(res_psi-1)) modepsi="backward"
+			else modepsi="central"
+			if(i_lambda==1) modelambda="forward"
+			else if(i_lambda==res_lambda) modelambda="backward"
+			else modelambda="central"
+				
+			gradientsConvex[,i_PHI+1, i_psi+1, i_lambda] = gradient(integralConvex,PHI,psi,lambda, modePHI, modepsi, modelambda)
+			gradientsConcave[,i_PHI+1, i_psi+1, i_lambda] = gradient(integralConcave,PHI,psi,lambda, modePHI, modepsi, modelambda)
+
+			hessiansConvex[,,i_PHI+1, i_psi+1, i_lambda] = hessian(integralConvex, PHI, psi, lambda, modePHI, modepsi, modelambda)
+			hessiansConcave[,,i_PHI+1, i_psi+1, i_lambda] = hessian(integralConcave, PHI, psi, lambda, modePHI, modepsi, modelambda)
 
 		}
 	}
