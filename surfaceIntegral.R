@@ -82,10 +82,21 @@ PHI2phi <- function(PHI, psi, lambda){
 		phiIntersection = normalAngle(nIntersection,nOrigin)
 		res = phiIntersection
 	}
+
+
+
+ArcCos[(-Cos[PHI] Cos[\[Psi]] Sin[\[Lambda]]+Cos[\[Lambda]] Sin[\[Psi]])/(\[Sqrt](Cos[\[Psi]]^2 Sin[\[Lambda]]^2-2 Cos[PHI] Cos[\[Lambda]] Cos[\[Psi]] Sin[\[Lambda]] Sin[\[Psi]]+(Cos[\[Lambda]]^2+Sin[PHI]^2 Sin[\[Lambda]]^2) Sin[\[Psi]]^2))]
+
+
 	res
+
 
 }
 
+
+maxPHI <- function(psi, lambda){
+	acos(cot(psi)*tan(lambda))
+}
 
 #normal vector in x-direction
 n = matrix(c(1,0,0),3,1)
