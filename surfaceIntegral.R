@@ -52,6 +52,10 @@ mvMultiply <- function(A,b){
 	matrix(c(A %*% b),3,1)
 }
 
+dot <- function(a,b){
+	c(t(a) %*% b)
+}
+
 #normalization of a vector
 normalize <- function(a){
 	a / sqrt(c(t(a) %*% a))
@@ -97,6 +101,20 @@ ArcCos[(-Cos[PHI] Cos[\[Psi]] Sin[\[Lambda]]+Cos[\[Lambda]] Sin[\[Psi]])/(\[Sqrt
 maxPHI <- function(psi, lambda){
 	acos(cot(psi)*tan(lambda))
 }
+
+
+maxPHI2 <- function()
+{
+	rho = acos(cos(lambda)*csc(psi))
+	v = mvMultiply(rotx(rho),ey)
+	n = mvMultiply(rotz(psi),ex) * cos(lambda)
+	t0 = normalize(v-n)
+	v2 = mvMultiply(rotz(psi-lambda,ex))
+	t1 = normalize(v2-n)
+	angleBetweenNormals(t0,t1) 
+}
+
+
 
 #normal vector in x-direction
 n = matrix(c(1,0,0),3,1)
