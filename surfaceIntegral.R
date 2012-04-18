@@ -26,7 +26,16 @@ max_psi = pi
 max_PHI = pi
 
 dimensions=3
-fd=0.01
+fd=0.00001
+
+
+ex = matrix(c(1,0,0),3,1)
+ey = matrix(c(0,1,0),3,1)
+ez = matrix(c(0,0,1),3,1)
+
+#normal vector to the plane connecting the origin, the integration origin and the interace center of the circular region
+nOrigin = matrix(c(0,0,1),3,1)
+
 
 #returns a rotation matrix around the Z axis for a certain angle theta
 rotz <- function(theta){
@@ -69,17 +78,18 @@ normalAngle <-function(a,b){
 #converts a PHI angle into a phi angle
 PHI2phi <- function(PHI, psi, lambda){
 
+
 	if(PHI==0){
 		#stability
 		res=0
 	}
 	else{
-		border = mvMultiply(rotz(-lambda), n)
-		v = mvMultiply(rotz(-psi), n)
-		a = border-n
+		border = mvMultiply(rotz(-lambda), ex)
+		v = mvMultiply(rotz(-psi), ex)
+		a = border-ex
 		aRot = mvMultiply(rotx(PHI), a)
 	
-		ip = n + aRot
+		ip = ex + aRot
 	
 		nIntersection = crossproduct(v,ip)
 		nIntersection = normalize(nIntersection)
@@ -89,7 +99,7 @@ PHI2phi <- function(PHI, psi, lambda){
 
 
 
-ArcCos[(-Cos[PHI] Cos[\[Psi]] Sin[\[Lambda]]+Cos[\[Lambda]] Sin[\[Psi]])/(\[Sqrt](Cos[\[Psi]]^2 Sin[\[Lambda]]^2-2 Cos[PHI] Cos[\[Lambda]] Cos[\[Psi]] Sin[\[Lambda]] Sin[\[Psi]]+(Cos[\[Lambda]]^2+Sin[PHI]^2 Sin[\[Lambda]]^2) Sin[\[Psi]]^2))]
+	#res = acos((-cos(PHI) * cos(psi) * sin(lambda)+cos(lambda) * sin(psi))/(sqrt(cos(psi)^2 * sin(lambda)^2-2 * cos(PHI) * cos(lambda) * cos(psi) * sin(lambda) * sin(psi)+(cos(lambda)^2+sin(PHI)^2 * sin(lambda)^2) * sin(psi)^2)))
 
 
 	res
@@ -97,50 +107,69 @@ ArcCos[(-Cos[PHI] Cos[\[Psi]] Sin[\[Lambda]]+Cos[\[Lambda]] Sin[\[Psi]])/(\[Sqrt
 
 }
 
+tmp=c(0,0)
 
 maxPHI <- function(psi, lambda){
-	acos(cot(psi)*tan(lambda))
+	tmp <<- c(psi,lambda)
+
+	if(psi>=pi/2) res=pi/2
+	else if(lambda==pi/2) res= pi/2
+	else if(psi<lambda) res = pi/2
+	else res = acos(cot(psi)*tan(lambda))
+
+	res
 }
 
 
-maxPHI2 <- function()
+halfSpherePHI <- function(psi,lambda)
 {
 	rho = acos(cos(lambda)*csc(psi))
 	v = mvMultiply(rotx(rho),ey)
 	n = mvMultiply(rotz(psi),ex) * cos(lambda)
 	t0 = normalize(v-n)
-	v2 = mvMultiply(rotz(psi-lambda,ex))
+	v2 = mvMultiply(rotz(psi-lambda),ex)
 	t1 = normalize(v2-n)
-	angleBetweenNormals(t0,t1) 
+	res = normalAngle(t0,t1)
+
+	res
 }
 
 
 
-#normal vector in x-direction
-n = matrix(c(1,0,0),3,1)
-
-#normal vector to the plane connecting the origin, the integration origin and the interace center of the circular region
-nOrigin = matrix(c(0,0,1),3,1)
 
 
 csc <-function(x){
 	1/sin(x)
 }
 
+cot <- function(x){
+	1/tan(x)
+}
 #gives theta values dependent on phi, psi and lambda angles for a convex spherical arc
 arcConvex <- function(phi, psi, lambda){
-	v = 1+(-cos(lambda) * cos(psi)+sqrt(cos(phi)^2 * sin(psi)^2 * (-cos(lambda)^2+cos(psi)^2+cos(phi)^2 * sin(psi)^2)))/(cos(psi)^2+cos(phi)^2 * sin(psi)^2)
+	v =1+(-cos(lambda) * cos(psi)+sqrt(cos(phi)^2 * sin(psi)^2 * (-cos(lambda)^2+cos(psi)^2+cos(phi)^2 * sin(psi)^2)))/(cos(psi)^2+cos(phi)^2 * sin(psi)^2)
 	#for(i in 1:length(v))
-	#	if(is.nan(v[i])) v[i]=0
+	#	v[i] = min(pi/2,v[i])
 	v
 }
 
 #gives theta values dependent on phi, psi and lambda angles for a concave spherical arc
 arcConcave <- function(phi, psi, lambda){
-	v = 1-(cos(lambda) * cos(psi)+sqrt(cos(phi)^2 * sin(psi)^2 * (-cos(lambda)^2+cos(psi)^2+cos(phi)^2 * sin(psi)^2)))/(cos(psi)^2+cos(phi)^2 * sin(psi)^2)	
+	v = 1-(cos(lambda) * cos(psi)+sqrt(cos(phi)^2 * sin(psi)^2 * (-cos(lambda)^2+cos(psi)^2+cos(phi)^2 * sin(psi)^2)))/(cos(psi)^2+cos(phi)^2 * sin(psi)^2)
 	#for(i in 1:length(v))
-	#	if(is.nan(v[i])) v[i]=0
+	#	v[i] = min(pi/2,v[i])
 	v
+}
+
+
+phiLimitAbs <-function(psi,lambda){
+	#print(c(psi,lambda))
+	#if(abs(cos(psi)) >= abs(cos(lambda))) limit=pi/2
+	#else limit=acos(sqrt((cos(lambda)^2-cos(psi)^2) * csc(psi)^2))
+
+	limit = PHI2phi(maxPHI(psi,lambda),psi,lambda)
+
+	limit
 }
 
 
@@ -148,13 +177,19 @@ integralConvex <-function(PHI, psi, lambda){
 	#convert PHI to phi
 	phi = PHI2phi(PHI,psi,lambda)
 	#calculate the maximal phi value to which we can integrate
-	phiLimit = PHI2phi(pi/2,psi,lambda)
+	#phiLimit = PHI2phi(pi/2,psi,lambda)
 
 
 	A=0
 
 	#if the integration origin is inside the circular area, we have to be careful how the integration limits are set
 	if(psi<=lambda){
+
+		phiLimit = phiLimitAbs(psi,lambda)
+	
+		if(PHI==0) phi=pi
+
+
 		#calculations for convex arcs
 		if(phi<=pi/2){
 			A = A + abs(integrate(arcConvex,lower=0,upper=phi,psi=psi,lambda=lambda)$val)
@@ -166,14 +201,30 @@ integralConvex <-function(PHI, psi, lambda){
 		
 	}
 	else{
-		#for the convex case
-		if(PHI < pi/2){
-			A = A + abs(integrate(arcConcave,lower=phi,upper=phiLimit,psi=psi,lambda=lambda)$val)
-			ip=phiLimit
+		#there are no convex regions above pi/2 (they are handled by the mirror-side)
+		if(psi>pi/2){
+			A=NaN
 		}
-		else ip=phi
-		
-		A = A + abs(integrate(arcConvex,lower=0,upper=ip,psi=psi,lambda=lambda)$val)
+		else{
+
+			#we reject every PHI that is "on the other side of the half-sphere"
+			if(psi-lambda>=pi/2 || (psi+lambda>=pi/2 && PHI > halfSpherePHI(psi,lambda))){
+				A= NaN
+			}
+			else{
+				
+				phiLimit = phiLimitAbs(psi,lambda)
+				PHILimit = maxPHI(psi,lambda)
+				#for the convex case
+				if(PHI < PHILimit){
+					A = A - abs(integrate(arcConcave,lower=phi,upper=phiLimit,psi=psi,lambda=lambda)$val)
+					ip=phiLimit
+				}
+				else ip=phi
+				
+				A = A + abs(integrate(arcConvex,lower=0,upper=ip,psi=psi,lambda=lambda)$val)
+			}
+		}
 	}
 	A
 }
@@ -182,24 +233,34 @@ integralConcave <-function(PHI, psi, lambda){
 	#convert PHI to phi
 	phi = PHI2phi(PHI,psi,lambda)
 	#calculate the maximal phi value to which we can integrate
-	phiLimit = PHI2phi(pi/2,psi,lambda)
-
+	
+	
 
 	A=0
 
 	#if the integration origin is inside the circular area, we have to be careful how the integration limits are set
 	if(psi<=lambda){
+		phiLimit = phiLimitAbs(psi,lambda)
 		#this is empty on purpose, calculating these values makes only theoretically sense, we will not use them
 	}
 	else{
-		#for the concave case
-		if(PHI > pi/2){
-			A = A + abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda)$val)
-			ip=phiLimit
+		if(psi-lambda>=pi/2 || (psi+lambda>=pi/2 && PHI > halfSpherePHI(psi,lambda))){
+			A= NaN
 		}
-		else ip=phi
-		
-		A = A + abs(integrate(arcConcave,lower=0,upper=ip,psi=psi,lambda=lambda)$val)
+		else{
+
+
+			phiLimit = phiLimitAbs(psi,lambda)
+			PHILimit = maxPHI(psi,lambda)
+			#for the concave case
+			if(PHI > PHILimit){
+				A = A + abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda)$val)
+				ip=phiLimit
+			}
+			else ip=phi
+			
+			A = A + abs(integrate(arcConcave,lower=0,upper=ip,psi=psi,lambda=lambda)$val)
+		}
 	}
 	A
 		
@@ -347,11 +408,21 @@ for(i_psi in 0:(res_psi-1)){
 			else if(i_lambda==res_lambda) modelambda="backward"
 			else modelambda="central"
 				
-			gradientsConvex[,i_PHI+1, i_psi+1, i_lambda] = gradient(integralConvex,PHI,psi,lambda, modePHI, modepsi, modelambda)
-			gradientsConcave[,i_PHI+1, i_psi+1, i_lambda] = gradient(integralConcave,PHI,psi,lambda, modePHI, modepsi, modelambda)
+			if(is.nan(dconv)) gconv = NaN
+			else gconv = gradient(integralConvex,PHI,psi,lambda, modePHI, modepsi, modelambda)
+			gradientsConvex[,i_PHI+1, i_psi+1, i_lambda] = gconv
 
-			hessiansConvex[,,i_PHI+1, i_psi+1, i_lambda] = hessian(integralConvex, PHI, psi, lambda, modePHI, modepsi, modelambda)
-			hessiansConcave[,,i_PHI+1, i_psi+1, i_lambda] = hessian(integralConcave, PHI, psi, lambda, modePHI, modepsi, modelambda)
+			if(is.nan(dconc)) gconc = NaN
+			else gconc = gradient(integralConcave,PHI,psi,lambda, modePHI, modepsi, modelambda)
+			gradientsConcave[,i_PHI+1, i_psi+1, i_lambda] = gconc
+
+			if(is.nan(dconv)) hconv = NaN
+			else hconv = hessian(integralConvex, PHI, psi, lambda, modePHI, modepsi, modelambda)
+			hessiansConvex[,,i_PHI+1, i_psi+1, i_lambda] = hconv
+
+			if(is.nan(dconc)) hconc = NaN
+			else hconc = hessian(integralConcave, PHI, psi, lambda, modePHI, modepsi, modelambda)
+			hessiansConcave[,,i_PHI+1, i_psi+1, i_lambda] = hconc
 
 		}
 	}

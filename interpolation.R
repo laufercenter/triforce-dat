@@ -108,17 +108,17 @@ interpolate <- function(x){
 
 }
 
-plb <- function(p){
+plb <- function(p,p2){
 res=100
 a=array(0,dim=c(res))
 b=array(0,dim=c(res))
 
 for(i in 0:res){
 	v = pi * i/(res-1)
-	a[i]=interpolate(c(p,v,0.629))
+	a[i]=interpolate(c(p,v,p2))
 	b[i]=v
 }
-plot(a,ylim=c(0,4))
+plot(a,type="l")
 }
 
 x=c(0.2*pi, 0.2*pi, 0.2*pi)
