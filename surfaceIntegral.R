@@ -37,6 +37,27 @@ ez = matrix(c(0,0,1),3,1)
 nOrigin = matrix(c(0,0,1),3,1)
 
 
+saveTable <-function(filename, dimensions, header, tbl){
+
+	headerdat = array(0,dim=c(length(header),8))
+	tbldat = array(0,dim=c(length(tbl),8))
+	write(file=filename,c(length(dimensions),nrow(header)),append=FALSE)
+	write(file=filename,dimensions,append=TRUE)
+	for(i in 1:length(header)){
+		headerdat[i,] = double2CharArray(header[i])
+	}
+	for(i in 1:length(tbl)){
+		tbldat[i,] = double2CharArray(tbl[i])
+	}
+
+	write(file=filename,headerdat,ncol=8,append=TRUE)
+	write(file=filename,tbldat,ncol=8,append=TRUE)
+}
+
+
+
+
+
 #returns a rotation matrix around the Z axis for a certain angle theta
 rotz <- function(theta){
 	matrix(c(cos(theta), sin(theta), 0, -sin(theta), cos(theta), 0, 0, 0, 1),3,3)
@@ -429,34 +450,46 @@ for(i_psi in 0:(res_psi-1)){
 }
 
 
-
 #now, save to file
 
-write(file="dataConvex.csv",c(res_PHI,res_psi,res_lambda),ncol=dimensions,append=FALSE)
-write(file="dataConvex.csv",headers,ncol=ncol(headers),append=TRUE)
-write(file="dataConcave.csv",c(res_PHI,res_psi,res_lambda),ncol=dimensions,append=FALSE)
-write(file="dataConcave.csv",headers,ncol=ncol(headers),append=TRUE)
-write(file="gradientsConvex.csv",c(dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+1,append=FALSE)
-write(file="gradientsConvex.csv",headers,ncol=ncol(headers),append=TRUE)
-write(file="gradientsConcave.csv",c(dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+1,append=FALSE)
-write(file="gradientsConcave.csv",headers,ncol=ncol(headers),append=TRUE)
-write(file="hessiansConvex.csv",c(dimensions,dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+2,append=FALSE)
-write(file="hessiansConvex.csv",headers,ncol=ncol(headers),append=TRUE)
-write(file="hessiansConcave.csv",c(dimensions,dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+2,append=FALSE)
-write(file="hessiansConcave.csv",headers,ncol=ncol(headers),append=TRUE)
+source("floatconversion.R")
 
-for(i_lambda in 1:res_lambda){
-	write(file="dataConvex.csv",dataConvex[,,i_lambda],ncol=res_psi,append=TRUE)
-	write(file="dataConcave.csv",dataConcave[,,i_lambda],ncol=res_psi,append=TRUE)
+saveTable("dataConvex.csv",c(res_PHI,res_psi,res_lambda),headers,dataConvex)
+saveTable("dataConcave.csv",c(res_PHI,res_psi,res_lambda),headers,dataConcave)
+saveTable("gradientsConvex.csv",c(3,res_PHI,res_psi,res_lambda),headers,gradientsConvex)
+saveTable("gradientsConcave.csv",c(3,res_PHI,res_psi,res_lambda),headers,gradientsConcave)
+saveTable("hessiansConvex.csv",c(3,3,res_PHI,res_psi,res_lambda),headers,hessiansConvex)
+saveTable("hessiansConcave.csv",c(3,3,res_PHI,res_psi,res_lambda),headers,hessiansConcave)
 
-	for(i_psi in 1:res_psi){
-		write(file="gradientsConvex.csv",gradientsConvex[,,i_psi,i_lambda],ncol=res_PHI,append=TRUE)
-		write(file="gradientsConcave.csv",gradientsConcave[,,i_psi,i_lambda],ncol=res_PHI,append=TRUE)
 
-		for(i_PHI in 1:res_PHI){
-			write(file="hessiansConvex.csv",hessiansConvex[,,i_PHI,i_psi,i_lambda],ncol=dimensions,append=TRUE)
-			write(file="hessiansConcave.csv",hessiansConcave[,,i_PHI,i_psi,i_lambda],ncol=dimensions,append=TRUE)
-		}
-	}
-}
+
+#write(file="dataConvex.csv",c(res_PHI,res_psi,res_lambda),ncol=dimensions,append=FALSE)
+#write(file="dataConvex.csv",headers,ncol=ncol(headers),append=TRUE)
+#write(file="dataConcave.csv",c(res_PHI,res_psi,res_lambda),ncol=dimensions,append=FALSE)
+#write(file="dataConcave.csv",headers,ncol=ncol(headers),append=TRUE)
+#write(file="gradientsConvex.csv",c(dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+1,append=FALSE)
+#write(file="gradientsConvex.csv",headers,ncol=ncol(headers),append=TRUE)
+#write(file="gradientsConcave.csv",c(dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+1,append=FALSE)
+#write(file="gradientsConcave.csv",headers,ncol=ncol(headers),append=TRUE)
+#write(file="hessiansConvex.csv",c(dimensions,dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+2,append=FALSE)
+#write(file="hessiansConvex.csv",headers,ncol=ncol(headers),append=TRUE)
+#write(file="hessiansConcave.csv",c(dimensions,dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+2,append=FALSE)
+#write(file="hessiansConcave.csv",headers,ncol=ncol(headers),append=TRUE)
+
+#for(i_lambda in 1:res_lambda){
+#	write(file="dataConvex.csv",dataConvex[,,i_lambda],ncol=res_psi,append=TRUE)
+#	write(file="dataConcave.csv",dataConcave[,,i_lambda],ncol=res_psi,append=TRUE)
+#
+#	for(i_psi in 1:res_psi){
+#		write(file="gradientsConvex.csv",gradientsConvex[,,i_psi,i_lambda],ncol=res_PHI,append=TRUE)
+#		write(file="gradientsConcave.csv",gradientsConcave[,,i_psi,i_lambda],ncol=res_PHI,append=TRUE)
+#
+#		for(i_PHI in 1:res_PHI){
+#			write(file="hessiansConvex.csv",hessiansConvex[,,i_PHI,i_psi,i_lambda],ncol=dimensions,append=TRUE)
+#			write(file="hessiansConcave.csv",hessiansConcave[,,i_PHI,i_psi,i_lambda],ncol=dimensions,append=TRUE)
+#		}
+#	}
+#}
+
+
 

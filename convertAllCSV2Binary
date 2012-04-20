@@ -1,0 +1,12 @@
+#!/bin/bash
+
+
+./convertCSV2Binary.py dataConvex.csv dataConvex.dat
+./convertCSV2Binary.py dataConcave.csv dataConcave.dat
+./convertCSV2Binary.py gradientsConvex.csv gradientsConvex.dat
+./convertCSV2Binary.py gradientsConcave.csv gradientsConcave.dat
+./convertCSV2Binary.py hessiansConvex.csv hessiansConvex.dat
+./convertCSV2Binary.py hessiansConcave.csv hessiansConcave.dat
+
+
+
