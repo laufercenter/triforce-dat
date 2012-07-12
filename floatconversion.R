@@ -8,7 +8,7 @@ double2CharArray <-function(x){
 		significand = a[1,"Mantissa"]
 		exponent = a[1,"Exponent"]
 		
-		significandInt32 = double2FixedSignedInt32(significand, 31)
+		significandInt32 = double2FixedSignedInt32(significand, 30)
 
 		data0 = fixedSignedInt322CharArray(significandInt32)
 		
@@ -24,7 +24,7 @@ double2CharArray <-function(x){
 fixedSignedInt322CharArray <-function(x){
 	INT32BYTEMASK=255
 
-	if(x>2^32-1) print("ERROR")
+	if(abs(x)>2^31-1) print("ERROR, number is larger than representable range")
 
 	data=c(0,0,0,0)
 	

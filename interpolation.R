@@ -118,7 +118,7 @@ for(i in 0:res){
 	a[i]=interpolate(c(p,v,p2))
 	b[i]=v
 }
-plot(a,type="l")
+plot(b,a,type="l")
 }
 
 x=c(0.2*pi, 0.2*pi, 0.2*pi)
