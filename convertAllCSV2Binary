@@ -2,11 +2,12 @@
 
 
 ./convertCSV2Binary.py dataConvex.csv dataConvex.dat
-./convertCSV2Binary.py dataConcave.csv dataConcave.dat
+#./convertCSV2Binary.py dataConcave.csv dataConcave.dat
 ./convertCSV2Binary.py dataConvex0.csv dataConvex0.dat
 ./convertCSV2Binary.py dataConvex1.csv dataConvex1.dat
 ./convertCSV2Binary.py dataConvex2.csv dataConvex2.dat
-./convertCSV2Binary.py dataConcave0.csv dataConcave0.dat
-./convertCSV2Binary.py dataConcave1.csv dataConcave1.dat
-./convertCSV2Binary.py dataConcave2.csv dataConcave2.dat
-
+#./convertCSV2Binary.py dataConcave0.csv dataConcave0.dat
+#./convertCSV2Binary.py dataConcave1.csv dataConcave1.dat
+#./convertCSV2Binary.py dataConcave2.csv dataConcave2.dat
+./convertCSV2Binary.py ipelimination0.csv ipelimination0.dat
+./convertCSV2Binary.py ipelimination1.csv ipelimination1.dat

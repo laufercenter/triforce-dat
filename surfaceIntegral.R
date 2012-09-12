@@ -16,9 +16,9 @@
 
 
 #the resolution of our grid
-res_lambda = 10
-res_psi = 10
-res_PHI = 10
+res_lambda = 12
+res_psi = 12
+res_PHI = 12
 
 #limits for the parameters
 max_lambda = pi/2
@@ -125,8 +125,8 @@ normalAngle <-function(a,b){
 #converts a PHI angle into a phi angle
 PHI2phi <- function(PHI, psi, lambda){
 
-
-	if(PHI==0){
+	#print(c("PHI2phi",PHI))
+	if(PHI==0 || lambda==0){
 		#stability
 		res=0
 	}
@@ -157,12 +157,17 @@ PHI2phi <- function(PHI, psi, lambda){
 tmp=c(0,0)
 
 maxPHI <- function(psi, lambda){
-	tmp <<- c(psi,lambda)
+	#tmp <<- c(psi,lambda)
 
-	if(psi>=pi/2) res=pi/2
-	else if(lambda==pi/2) res= pi/2
-	else if(psi<lambda) res = pi/2
-	else res = acos(cot(psi)*tan(lambda))
+	if(lambda==0){
+		res=0
+	}
+	else{
+		if(psi>=pi/2) res=pi/2
+		else if(lambda==pi/2) res= pi/2
+		else if(psi<lambda) res = pi/2
+		else res = acos(cot(psi)*tan(lambda))
+	}
 
 	res
 }
@@ -170,13 +175,18 @@ maxPHI <- function(psi, lambda){
 
 halfSpherePHI <- function(psi,lambda)
 {
-	rho = acos(cos(lambda)*csc(psi))
-	v = mvMultiply(rotx(rho),ey)
-	n = mvMultiply(rotz(psi),ex) * cos(lambda)
-	t0 = normalize(v-n)
-	v2 = mvMultiply(rotz(psi-lambda),ex)
-	t1 = normalize(v2-n)
-	res = normalAngle(t0,t1)
+	if(lambda==0){
+		res=0
+	}
+	else{
+		rho = acos(cos(lambda)*csc(psi))
+		v = mvMultiply(rotx(rho),ey)
+		n = mvMultiply(rotz(psi),ex) * cos(lambda)
+		t0 = normalize(v-n)
+		v2 = mvMultiply(rotz(psi-lambda),ex)
+		t1 = normalize(v2-n)
+		res = normalAngle(t0,t1)
+	}
 
 	res
 }
@@ -195,16 +205,17 @@ cot <- function(x){
 #gives theta values dependent on phi, psi and lambda angles for a convex spherical arc
 arcConvex <- function(phi, psi, lambda){
 	v =1+(-cos(lambda) * cos(psi)+sqrt(cos(phi)^2 * sin(psi)^2 * (-cos(lambda)^2+cos(psi)^2+cos(phi)^2 * sin(psi)^2)))/(cos(psi)^2+cos(phi)^2 * sin(psi)^2)
-	#for(i in 1:length(v))
-	#	v[i] = min(pi/2,v[i])
+	for(i in 1:length(v))
+		if(is.nan(v[i])) v[i]=0
+
 	v
 }
 
 #gives theta values dependent on phi, psi and lambda angles for a concave spherical arc
 arcConcave <- function(phi, psi, lambda){
 	v = 1-(cos(lambda) * cos(psi)+sqrt(cos(phi)^2 * sin(psi)^2 * (-cos(lambda)^2+cos(psi)^2+cos(phi)^2 * sin(psi)^2)))/(cos(psi)^2+cos(phi)^2 * sin(psi)^2)
-	#for(i in 1:length(v))
-	#	v[i] = min(pi/2,v[i])
+	for(i in 1:length(v))
+		if(is.nan(v[i])) v[i]=0
 	v
 }
 
@@ -213,6 +224,7 @@ phiLimitAbs <-function(psi,lambda){
 	#print(c(psi,lambda))
 	#if(abs(cos(psi)) >= abs(cos(lambda))) limit=pi/2
 	#else limit=acos(sqrt((cos(lambda)^2-cos(psi)^2) * csc(psi)^2))
+	#print(c("phiLimitAbs",maxPHI(psi,lambda)))
 
 	limit = PHI2phi(maxPHI(psi,lambda),psi,lambda)
 
@@ -223,6 +235,7 @@ phiLimitAbs <-function(psi,lambda){
 integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 	#convert PHI to phi
 	phi = PHI2phi(PHI,psi,lambda)
+	#print(c("icx",phi,PHI,psi,lambda))
 	#calculate the maximal phi value to which we can integrate
 	#phiLimit = PHI2phi(pi/2,psi,lambda)
 
@@ -235,7 +248,6 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 		phiLimit = phiLimitAbs(psi,lambda)
 	
 		if(PHI==0) phi=pi
-
 
 		#calculations for convex arcs
 		if(phi<=pi/2){
@@ -255,7 +267,8 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 		else{
 
 			#we reject every PHI that is "on the other side of the half-sphere"
-			if(psi-lambda>=pi/2 || (psi+lambda>=pi/2 && PHI > halfSpherePHI(psi,lambda))){
+			#print(c("icvx",psi,lambda,PHI,halfSpherePHI(psi,lambda)))
+			if(psi-lambda>=pi/2 || (psi+lambda>pi/2 && PHI > halfSpherePHI(psi,lambda))){
 				A= NaN
 			}
 			else{
@@ -291,7 +304,7 @@ integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 		#this is empty on purpose, calculating these values makes only theoretically sense, we will not use them
 	}
 	else{
-		if(psi-lambda>=pi/2 || (psi+lambda>=pi/2 && PHI > halfSpherePHI(psi,lambda))){
+		if(psi-lambda>=pi/2 || (psi+lambda>pi/2 && PHI > halfSpherePHI(psi,lambda))){
 			A= NaN
 		}
 		else{
@@ -301,7 +314,7 @@ integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 			PHILimit = maxPHI(psi,lambda)
 			#for the concave case
 			if(PHI > PHILimit){
-				A = A + abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda)$val)
+				A = A - abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda)$val)
 				ip=phiLimit
 			}
 			else ip=phi
@@ -436,30 +449,29 @@ headers=array(0,dim=c(dimensions,max(res_PHI,res_psi,res_lambda)))
 #iterate over psi angles
 for(i_psi in 0:(res_psi-1)){
 	print(i_psi)
-	psi = max_psi*i_psi/(res_psi-1)
+	psi = max_psi*i_psi/(res_psi)
 
 	headers[2,i_psi+1]=psi
 
 	#iterate over lambda angles
-	for(i_lambda in 1:(res_lambda)){
-		lambda = max_lambda*i_lambda/res_lambda
+	for(i_lambda in 0:(res_lambda-1)){
+		lambda = max_lambda*i_lambda/(res_lambda)
 
-		headers[3,i_lambda]=lambda
+		headers[3,i_lambda+1]=lambda
 
 
 
 		for(i_PHI in 0:(res_PHI-1)){
-			PHI = max_PHI * i_PHI/(res_PHI-1)
+			PHI = max_PHI * i_PHI/(res_PHI)
 
 			headers[1,i_PHI+1]=PHI
-
 
 
 			dconv = integralConvex(PHI,psi,lambda)
 			dconc = integralConcave(PHI,psi,lambda)
 
-			dataConvex[i_PHI+1, i_psi+1, i_lambda] = dconv
-			dataConcave[i_PHI+1, i_psi+1, i_lambda] = dconc
+			dataConvex[i_PHI+1, i_psi+1, i_lambda+1] = dconv
+			dataConcave[i_PHI+1, i_psi+1, i_lambda+1] = dconc
 			modePHI="central"
 			modepsi="central"
 			modelambda="central"
@@ -470,25 +482,25 @@ for(i_psi in 0:(res_psi-1)){
 			if(i_psi==0) modepsi="forward"
 			else if(i_psi==(res_psi-1)) modepsi="backward"
 			else modepsi="central"
-			if(i_lambda==1) modelambda="forward"
-			else if(i_lambda==res_lambda) modelambda="backward"
+			if(i_lambda==0) modelambda="forward"
+			else if(i_lambda==(res_lambda-1)) modelambda="backward"
 			else modelambda="central"
 				
 			if(is.nan(dconv)) gconv = NaN
 			else gconv = gradient(integralConvex,PHI,psi,lambda, modePHI, modepsi, modelambda)
-			gradientsConvex[,i_PHI+1, i_psi+1, i_lambda] = gconv
+			gradientsConvex[,i_PHI+1, i_psi+1, i_lambda+1] = gconv
 
 			if(is.nan(dconc)) gconc = NaN
 			else gconc = gradient(integralConcave,PHI,psi,lambda, modePHI, modepsi, modelambda)
-			gradientsConcave[,i_PHI+1, i_psi+1, i_lambda] = gconc
+			gradientsConcave[,i_PHI+1, i_psi+1, i_lambda+1] = gconc
 
 			if(is.nan(dconv)) hconv = NaN
 			else hconv = hessian(integralConvex, PHI, psi, lambda, modePHI, modepsi, modelambda)
-			hessiansConvex[,,i_PHI+1, i_psi+1, i_lambda] = hconv
+			hessiansConvex[,,i_PHI+1, i_psi+1, i_lambda+1] = hconv
 
 			if(is.nan(dconc)) hconc = NaN
 			else hconc = hessian(integralConcave, PHI, psi, lambda, modePHI, modepsi, modelambda)
-			hessiansConcave[,,i_PHI+1, i_psi+1, i_lambda] = hconc
+			hessiansConcave[,,i_PHI+1, i_psi+1, i_lambda+1] = hconc
 
 			
 
@@ -496,21 +508,21 @@ for(i_psi in 0:(res_psi-1)){
 	}
 }
 
-
+if(FALSE){
 #build tables for the components of the gradient
 for(i_psi in 0:(res_psi-1)){
 	print(i_psi)
-	psi = max_psi*i_psi/(res_psi-1)
+	psi = max_psi*i_psi/(res_psi)
 
 	#iterate over lambda angles
-	for(i_lambda in 1:(res_lambda)){
-		lambda = max_lambda*i_lambda/res_lambda
+	for(i_lambda in 0:(res_lambda-1)){
+		lambda = max_lambda*i_lambda/(res_lambda)
 
 		for(i_PHI in 0:(res_PHI-1)){
-			PHI = max_PHI * i_PHI/(res_PHI-1)
+			PHI = max_PHI * i_PHI/(res_PHI)
 
-			dconv = dataConvex[i_PHI+1, i_psi+1, i_lambda]
-			dconc = dataConcave[i_PHI+1, i_psi+1, i_lambda]
+			dconv = dataConvex[i_PHI+1, i_psi+1, i_lambda+1]
+			dconc = dataConcave[i_PHI+1, i_psi+1, i_lambda+1]
 
 
 			modePHI="central"
@@ -523,30 +535,30 @@ for(i_psi in 0:(res_psi-1)){
 			if(i_psi==0) modepsi="forward"
 			else if(i_psi==(res_psi-1)) modepsi="backward"
 			else modepsi="central"
-			if(i_lambda==1) modelambda="forward"
-			else if(i_lambda==res_lambda) modelambda="backward"
+			if(i_lambda==0) modelambda="forward"
+			else if(i_lambda==(res_lambda-1)) modelambda="backward"
 			else modelambda="central"
 
 			for(i_c in 1:3){
 				if(is.nan(dconv)) gconv = NaN
 				else gconv = gradient(gradientIntegralConvex,PHI,psi,lambda, modePHI, modepsi, modelambda,i_c)
-				gradientsGradientsConvex[i_c,,i_PHI+1, i_psi+1, i_lambda] = gconv
+				gradientsGradientsConvex[i_c,,i_PHI+1, i_psi+1, i_lambda+1] = gconv
 			}
 			for(i_c in 1:3){
 				if(is.nan(dconv)) gconv = NaN
 				else gconc = gradient(gradientIntegralConcave,PHI,psi,lambda, modePHI, modepsi, modelambda,i_c)
-				gradientsGradientsConcave[i_c,,i_PHI+1, i_psi+1, i_lambda] = gconc
+				gradientsGradientsConcave[i_c,,i_PHI+1, i_psi+1, i_lambda+1] = gconc
 			}
 
 			for(i_c in 1:3){
 				if(is.nan(dconv)) hconv = NaN
 				else gconv = hessian(gradientIntegralConvex,PHI,psi,lambda, modePHI, modepsi, modelambda,i_c)
-				hessiansGradientsConvex[i_c,,,i_PHI+1, i_psi+1, i_lambda] = hconv
+				hessiansGradientsConvex[i_c,,,i_PHI+1, i_psi+1, i_lambda+1] = hconv
 			}
 			for(i_c in 1:3){
 				if(is.nan(dconv)) hconv = NaN
 				else hconc = hessian(gradientIntegralConcave,PHI,psi,lambda, modePHI, modepsi, modelambda,i_c)
-				hessiansGradientsConcave[i_c,,,i_PHI+1, i_psi+1, i_lambda] = hconc
+				hessiansGradientsConcave[i_c,,,i_PHI+1, i_psi+1, i_lambda+1] = hconc
 			}
 
 
@@ -563,44 +575,13 @@ for(i_psi in 0:(res_psi-1)){
 source("floatconversion.R")
 
 saveTable("dataConvex.csv",c(res_PHI,res_psi,res_lambda),headers,dataConvex, gradientsConvex, hessiansConvex)
-saveTable("dataConcave.csv",c(res_PHI,res_psi,res_lambda),headers,dataConcave, gradientsConcave, hessiansConcave)
+#saveTable("dataConcave.csv",c(res_PHI,res_psi,res_lambda),headers,dataConcave, gradientsConcave, hessiansConcave)
 
 for(i in 1:dimensions){
 	saveTable(paste0("dataConvex",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headers,gradientsConvex[i,,,], gradientsGradientsConvex[i,,,,], hessiansGradientsConvex[i,,,,,])
-	saveTable(paste0("dataConcave",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headers,gradientsConcave[i,,,], gradientsGradientsConcave[i,,,,], hessiansGradientsConcave[i,,,,,])
+#	saveTable(paste0("dataConcave",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headers,gradientsConcave[i,,,], gradientsGradientsConcave[i,,,,], hessiansGradientsConcave[i,,,,,])
 }
 
-
+}
 #saveTableRaw("dataConvex.raw",c(res_PHI,res_psi,res_lambda),headers,dataConvex)
-
-
-#write(file="dataConvex.csv",c(res_PHI,res_psi,res_lambda),ncol=dimensions,append=FALSE)
-#write(file="dataConvex.csv",headers,ncol=ncol(headers),append=TRUE)
-#write(file="dataConcave.csv",c(res_PHI,res_psi,res_lambda),ncol=dimensions,append=FALSE)
-#write(file="dataConcave.csv",headers,ncol=ncol(headers),append=TRUE)
-#write(file="gradientsConvex.csv",c(dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+1,append=FALSE)
-#write(file="gradientsConvex.csv",headers,ncol=ncol(headers),append=TRUE)
-#write(file="gradientsConcave.csv",c(dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+1,append=FALSE)
-#write(file="gradientsConcave.csv",headers,ncol=ncol(headers),append=TRUE)
-#write(file="hessiansConvex.csv",c(dimensions,dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+2,append=FALSE)
-#write(file="hessiansConvex.csv",headers,ncol=ncol(headers),append=TRUE)
-#write(file="hessiansConcave.csv",c(dimensions,dimensions,res_PHI,res_psi,res_lambda),ncol=dimensions+2,append=FALSE)
-#write(file="hessiansConcave.csv",headers,ncol=ncol(headers),append=TRUE)
-
-#for(i_lambda in 1:res_lambda){
-#	write(file="dataConvex.csv",dataConvex[,,i_lambda],ncol=res_psi,append=TRUE)
-#	write(file="dataConcave.csv",dataConcave[,,i_lambda],ncol=res_psi,append=TRUE)
-#
-#	for(i_psi in 1:res_psi){
-#		write(file="gradientsConvex.csv",gradientsConvex[,,i_psi,i_lambda],ncol=res_PHI,append=TRUE)
-#		write(file="gradientsConcave.csv",gradientsConcave[,,i_psi,i_lambda],ncol=res_PHI,append=TRUE)
-#
-#		for(i_PHI in 1:res_PHI){
-#			write(file="hessiansConvex.csv",hessiansConvex[,,i_PHI,i_psi,i_lambda],ncol=dimensions,append=TRUE)
-#			write(file="hessiansConcave.csv",hessiansConcave[,,i_PHI,i_psi,i_lambda],ncol=dimensions,append=TRUE)
-#		}
-#	}
-#}
-
-
 
