@@ -261,30 +261,25 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 	}
 	else{
 		#there are no convex regions above pi/2 (they are handled by the mirror-side)
-		if(psi>pi/2){
-			A=NaN
-		}
-		else{
 
-			#we reject every PHI that is "on the other side of the half-sphere"
-			#print(c("icvx",psi,lambda,PHI,halfSpherePHI(psi,lambda)))
-			if(psi-lambda>=pi/2 || (psi+lambda>pi/2 && PHI > halfSpherePHI(psi,lambda))){
-				A= NaN
+		#we reject every PHI that is "on the other side of the half-sphere"
+		#print(c("icvx",psi,lambda,PHI,halfSpherePHI(psi,lambda)))
+		#if(psi-lambda>=pi/2 || (psi+lambda>pi/2 && PHI > halfSpherePHI(psi,lambda))){
+		#	A= -1
+		#}
+		#else{
+			
+			phiLimit = phiLimitAbs(psi,lambda)
+			PHILimit = maxPHI(psi,lambda)
+			#for the convex case
+			if(PHI < PHILimit){
+				A = A - abs(integrate(arcConcave,lower=phi,upper=phiLimit,psi=psi,lambda=lambda)$val)
+				ip=phiLimit
 			}
-			else{
-				
-				phiLimit = phiLimitAbs(psi,lambda)
-				PHILimit = maxPHI(psi,lambda)
-				#for the convex case
-				if(PHI < PHILimit){
-					A = A - abs(integrate(arcConcave,lower=phi,upper=phiLimit,psi=psi,lambda=lambda)$val)
-					ip=phiLimit
-				}
-				else ip=phi
-				
-				A = A + abs(integrate(arcConvex,lower=0,upper=ip,psi=psi,lambda=lambda)$val)
-			}
-		}
+			else ip=phi
+			
+			A = A + abs(integrate(arcConvex,lower=0,upper=ip,psi=psi,lambda=lambda)$val)
+		#}
 	}
 	A
 }
@@ -449,20 +444,20 @@ headers=array(0,dim=c(dimensions,max(res_PHI,res_psi,res_lambda)))
 #iterate over psi angles
 for(i_psi in 0:(res_psi-1)){
 	print(i_psi)
-	psi = max_psi*i_psi/(res_psi)
+	psi = max_psi*i_psi/(res_psi-1)
 
 	headers[2,i_psi+1]=psi
 
 	#iterate over lambda angles
 	for(i_lambda in 0:(res_lambda-1)){
-		lambda = max_lambda*i_lambda/(res_lambda)
+		lambda = max_lambda*i_lambda/(res_lambda-1)
 
 		headers[3,i_lambda+1]=lambda
 
 
 
 		for(i_PHI in 0:(res_PHI-1)){
-			PHI = max_PHI * i_PHI/(res_PHI)
+			PHI = max_PHI * i_PHI/(res_PHI-1)
 
 			headers[1,i_PHI+1]=PHI
 
@@ -508,18 +503,18 @@ for(i_psi in 0:(res_psi-1)){
 	}
 }
 
-if(FALSE){
+if(TRUE){
 #build tables for the components of the gradient
 for(i_psi in 0:(res_psi-1)){
 	print(i_psi)
-	psi = max_psi*i_psi/(res_psi)
+	psi = max_psi*i_psi/(res_psi-1)
 
 	#iterate over lambda angles
 	for(i_lambda in 0:(res_lambda-1)){
-		lambda = max_lambda*i_lambda/(res_lambda)
+		lambda = max_lambda*i_lambda/(res_lambda-1)
 
 		for(i_PHI in 0:(res_PHI-1)){
-			PHI = max_PHI * i_PHI/(res_PHI)
+			PHI = max_PHI * i_PHI/(res_PHI-1)
 
 			dconv = dataConvex[i_PHI+1, i_psi+1, i_lambda+1]
 			dconc = dataConcave[i_PHI+1, i_psi+1, i_lambda+1]
