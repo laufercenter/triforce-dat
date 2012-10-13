@@ -12,7 +12,8 @@
 #   +                     +
 
 
-
+FAILSAFE=TRUE
+DODERIVATIVES=FALSE
 
 
 #the resolution of our grid
@@ -32,6 +33,8 @@ fd=0.00001
 ex = matrix(c(1,0,0),3,1)
 ey = matrix(c(0,1,0),3,1)
 ez = matrix(c(0,0,1),3,1)
+
+THRESHOLD_NUMERICAL = 0.00001
 
 #normal vector to the plane connecting the origin, the integration origin and the interace center of the circular region
 nOrigin = matrix(c(0,0,1),3,1)
@@ -126,7 +129,7 @@ normalAngle <-function(a,b){
 PHI2phi <- function(PHI, psi, lambda){
 
 	#print(c("PHI2phi",PHI))
-	if(PHI==0 || lambda==0){
+	if(lambda==0){
 		#stability
 		res=0
 	}
@@ -154,6 +157,29 @@ PHI2phi <- function(PHI, psi, lambda){
 
 }
 
+
+#converts a PHI angle into a phi angle
+PHI2HalfSphereAngle <- function(PHI, psi, lambda){
+
+	border = mvMultiply(rotz(-lambda), ex)
+	v = mvMultiply(rotz(-psi), ex)
+	a = border-ex
+	aRot = mvMultiply(rotx(PHI), a)
+	
+	ip = ex + aRot
+	ipv = mvMultiply(rotz(psi),ip)
+
+	res = normalAngle(normalize(ipv),ex)
+	
+
+
+	res
+
+
+}
+
+
+
 tmp=c(0,0)
 
 maxPHI <- function(psi, lambda){
@@ -163,8 +189,8 @@ maxPHI <- function(psi, lambda){
 		res=0
 	}
 	else{
-		if(psi>=pi/2) res=pi/2
-		else if(lambda==pi/2) res= pi/2
+		if(psi>pi/2) res=pi/2
+		else if(lambda==pi/2) res= pi
 		else if(psi<lambda) res = pi/2
 		else res = acos(cot(psi)*tan(lambda))
 	}
@@ -244,18 +270,25 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 
 	#if the integration origin is inside the circular area, we have to be careful how the integration limits are set
 	if(psi<=lambda){
-
-		phiLimit = phiLimitAbs(psi,lambda)
-	
-		if(PHI==0) phi=pi
-
-		#calculations for convex arcs
-		if(phi<=pi/2){
-			A = A + abs(integrate(arcConvex,lower=0,upper=phi,psi=psi,lambda=lambda)$val)
+		if(FAILSAFE && PHI2HalfSphereAngle(PHI,psi,lambda)-THRESHOLD_NUMERICAL > pi/2){
+			A = NaN
+			A= -1
 		}
 		else{
-			A = A + abs(integrate(arcConvex,lower=0,upper=pi/2,psi=psi,lambda=lambda)$val)
-			A = A + abs(integrate(arcConcave,lower=pi/2,upper=pi-phi,psi=psi,lambda=lambda)$val)
+
+
+			phiLimit = phiLimitAbs(psi,lambda)
+		
+			if(PHI==0) phi=pi
+
+			#calculations for convex arcs
+			if(phi<=pi/2){
+				A = A + abs(integrate(arcConvex,lower=0,upper=phi,psi=psi,lambda=lambda)$val)
+			}
+			else{
+				A = A + abs(integrate(arcConvex,lower=0,upper=pi/2,psi=psi,lambda=lambda)$val)
+				A = A + abs(integrate(arcConcave,lower=pi/2,upper=pi-phi,psi=psi,lambda=lambda)$val)
+			}
 		}
 		
 	}
@@ -268,7 +301,14 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 		#	A= -1
 		#}
 		#else{
-			
+
+
+		if(FAILSAFE && PHI2HalfSphereAngle(PHI,psi,lambda)-THRESHOLD_NUMERICAL > pi/2){
+			A = NaN
+			A= -2
+		}
+		else{
+		
 			phiLimit = phiLimitAbs(psi,lambda)
 			PHILimit = maxPHI(psi,lambda)
 			#for the convex case
@@ -279,7 +319,7 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 			else ip=phi
 			
 			A = A + abs(integrate(arcConvex,lower=0,upper=ip,psi=psi,lambda=lambda)$val)
-		#}
+		}
 	}
 	A
 }
@@ -287,40 +327,85 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 	#convert PHI to phi
 	phi = PHI2phi(PHI,psi,lambda)
+	#print(c("icx",phi,PHI,psi,lambda))
 	#calculate the maximal phi value to which we can integrate
-	
-	
+	#phiLimit = PHI2phi(pi/2,psi,lambda)
+
 
 	A=0
 
 	#if the integration origin is inside the circular area, we have to be careful how the integration limits are set
 	if(psi<=lambda){
-		phiLimit = phiLimitAbs(psi,lambda)
-		#this is empty on purpose, calculating these values makes only theoretically sense, we will not use them
+
+		A= 0
+		
 	}
 	else{
-		if(psi-lambda>=pi/2 || (psi+lambda>pi/2 && PHI > halfSpherePHI(psi,lambda))){
-			A= NaN
+		if(FAILSAFE && PHI2HalfSphereAngle(PHI,psi,lambda)-THRESHOLD_NUMERICAL > pi/2){
+			A = NaN
+			A= -2
 		}
 		else{
-
-
-			phiLimit = phiLimitAbs(psi,lambda)
-			PHILimit = maxPHI(psi,lambda)
-			#for the concave case
-			if(PHI > PHILimit){
-				A = A - abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda)$val)
-				ip=phiLimit
+			if(psi+THRESHOLD_NUMERICAL>=pi && lambda+THRESHOLD_NUMERICAL>=pi/2){
+				A = -PHI
 			}
-			else ip=phi
-			
-			A = A + abs(integrate(arcConcave,lower=0,upper=ip,psi=psi,lambda=lambda)$val)
+			else{
+
+				phiLimit = phiLimitAbs(psi,lambda)
+				PHILimit = maxPHI(psi,lambda)
+
+				if(PHI > PHILimit){
+					A = A + abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda)$val)
+					ip=phiLimit
+				}
+				else ip=phi
+				
+				A = A - abs(integrate(arcConcave,lower=0,upper=ip,psi=psi,lambda=lambda)$val)
+			}
 		}
+
 	}
 	A
-		
-
 }
+
+
+#integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
+#	#convert PHI to phi
+#	phi = PHI2phi(PHI,psi,lambda)
+#	#calculate the maximal phi value to which we can integrate
+#	
+#	
+#
+#	A=0
+#
+#	#if the integration origin is inside the circular area, we have to be careful how the integration limits are set
+#	if(psi<=lambda){
+#		phiLimit = phiLimitAbs(psi,lambda)
+#		#this is empty on purpose, calculating these values makes only theoretically sense, we will not use them
+#	}
+#	else{
+#		if(psi-lambda>=pi/2 || (psi+lambda>pi/2 && PHI > halfSpherePHI(psi,lambda))){
+#			A= NaN
+#		}
+#		else{
+#
+#
+#			phiLimit = phiLimitAbs(psi,lambda)
+#			PHILimit = maxPHI(psi,lambda)
+#			#for the concave case
+#			if(PHI > PHILimit){
+#				A = A - abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda)$val)
+#				ip=phiLimit
+#			}
+#			else ip=phi
+#			
+#			A = A + abs(integrate(arcConcave,lower=0,upper=ip,psi=psi,lambda=lambda)$val)
+#		}
+#	}
+#	A
+#		
+#
+#}
 
 
 gradientIntegralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
@@ -503,7 +588,7 @@ for(i_psi in 0:(res_psi-1)){
 	}
 }
 
-if(TRUE){
+if(DODERIVATIVES){
 #build tables for the components of the gradient
 for(i_psi in 0:(res_psi-1)){
 	print(i_psi)
@@ -570,11 +655,11 @@ for(i_psi in 0:(res_psi-1)){
 source("floatconversion.R")
 
 saveTable("dataConvex.csv",c(res_PHI,res_psi,res_lambda),headers,dataConvex, gradientsConvex, hessiansConvex)
-#saveTable("dataConcave.csv",c(res_PHI,res_psi,res_lambda),headers,dataConcave, gradientsConcave, hessiansConcave)
+saveTable("dataConcave.csv",c(res_PHI,res_psi,res_lambda),headers,dataConcave, gradientsConcave, hessiansConcave)
 
 for(i in 1:dimensions){
 	saveTable(paste0("dataConvex",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headers,gradientsConvex[i,,,], gradientsGradientsConvex[i,,,,], hessiansGradientsConvex[i,,,,,])
-#	saveTable(paste0("dataConcave",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headers,gradientsConcave[i,,,], gradientsGradientsConcave[i,,,,], hessiansGradientsConcave[i,,,,,])
+	saveTable(paste0("dataConcave",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headers,gradientsConcave[i,,,], gradientsGradientsConcave[i,,,,], hessiansGradientsConcave[i,,,,,])
 }
 
 }
