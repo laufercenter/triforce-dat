@@ -2,7 +2,7 @@ library("accuracy")
 library("bitops")
 
 double2CharArray <-function(x){
-	if(is.nan(x)) res=c(0,0,0,0,0,0,0,0)
+	if(is.nan(x)) res=c(255,255,255,255,255,255,255,255)
 	else{
 		a=frexp(x)
 		significand = a[1,"Mantissa"]

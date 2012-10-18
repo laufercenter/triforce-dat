@@ -14,6 +14,7 @@ outname = sys.argv[2]
 f = open(inname,"r")
 o = open(outname,"w")
 
+o.write("NILS")
 line = f.readline()
 while len(line) != 0:
 	c=line.split()
