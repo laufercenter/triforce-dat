@@ -13,8 +13,8 @@
 
 
 FAILSAFE=TRUE
-DODERIVATIVES=TRUE
-DOHESSIANS=TRUE
+DODERIVATIVES=FALSE
+DOHESSIANS=FALSE
 
 
 #the resolution of our grid
@@ -144,6 +144,9 @@ PHI2phi <- function(PHI, psi, lambda){
 		#stability
 		res=0
 	}
+	else if(lambda==psi && PHI==0){
+		res=0
+	}
 	else{
 		border = mvMultiply(rotz(-lambda), ex)
 		v = mvMultiply(rotz(-psi), ex)
@@ -194,16 +197,21 @@ tmp=c(0,0)
 
 maxPHI <- function(psi, lambda){
 	#tmp <<- c(psi,lambda)
+	hsboundary=pi
+
+	if(psi+lambda>=pi/2){
+		hsboundary = halfSpherePHI(psi,lambda)
+	}
 
 	if(lambda==0){
 		res=0
 	}
 	else{
-		if(psi>pi/2) res=pi/2
-		else if(lambda==pi/2) res= pi
-		else if(psi<lambda) res = pi/2
+		if(psi<lambda) res = pi/2
 		else res = acos(cot(psi)*tan(lambda))
 	}
+
+	res = min(hsboundary,res)
 
 	res
 }
@@ -260,6 +268,10 @@ arcConvex <- function(phi, psi, lambda){
 	#print(c("flambda",lambda))
 	#print(c("fv",v))
 
+	
+	for(i in 1:length(phi))
+		v[i] = min(v[i],pi/2)
+
 	v
 }
 
@@ -277,6 +289,9 @@ arcConcave <- function(phi, psi, lambda){
 		}
 		v = 1-(cos(lambda) * cos(psi)+sqrt(s))/(cos(psi)^2+cos(phi)^2 * sin(psi)^2)
 	}
+
+	for(i in 1:length(phi))
+		v[i] = min(v[i],pi/2)
 
 
 	v
@@ -362,7 +377,7 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 	#phiLimit = PHI2phi(pi/2,psi,lambda)
 
 
-	#print(c("enter",PHI,psi,lambda))
+	print(c("enterconvex",PHI,psi,lambda))
 	A=0
 
 	#if the integration origin is inside the circular area, we have to be careful how the integration limits are set
@@ -432,13 +447,14 @@ integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 	#calculate the maximal phi value to which we can integrate
 	#phiLimit = PHI2phi(pi/2,psi,lambda)
 
+	print(c("enterconcave",PHI,psi,lambda))
 
 	A=0
 
 	#if the integration origin is inside the circular area, we have to be careful how the integration limits are set
-	if(psi<=lambda){
+	if(psi<lambda){
 
-		A=0
+		A=NaN
 	
 	}
 	else{
@@ -640,7 +656,7 @@ headerPHIConcave=array(0,dim=c(res_PHI, res_psi, res_lambda))
 
 #iterate over lambda angles
 for(i_lambda in 0:(res_lambda-1)){
-	print(c(round(100*i_lambda/(res_lambda-1)),"% completed"))
+	print(c(round(100*i_lambda/(res_lambda)),"% completed"))
 	lambda = max_lambda*i_lambda/(res_lambda-1)
 
 	headerLambdaConvex[i_lambda+1]=lambda
@@ -698,8 +714,8 @@ for(i_lambda in 0:(res_lambda-1)){
 			headerPHIConcave[i_PHI+1, i_psi+1, i_lambda+1]=PHI_concave
 
 
-			#print(c("convex: ",PHI_convex,psi_convex,lambda))
-			#print(c("concave: ",PHI_concave,psi_concave,lambda))
+			print(c("convex: ",i_PHI,PHI_convex,i_psi,psi_convex,i_lambda,lambda))
+			print(c("concave: ",i_PHI,PHI_concave,i_psi,psi_concave,i_lambda,lambda))
 
 			#print("dataConvex")
 			dconv = integralConvex(PHI_convex,psi_convex,lambda)
@@ -767,14 +783,18 @@ for(i_lambda in 0:(res_lambda-1)){
 		}
 	}
 }
+print(c(100,"% completed"))
 
-print("DERIVATIVES")
 
-if(DODERIVATIVES || DOHESSIANS)
+if(!DODERIVATIVES && !DOHESSIANS) print("we will not generate tables for derivatives nor hessians")
+if(DODERIVATIVES && !DOHESSIANS) print("generating tables for derivatives")
+if(DODERIVATIVES && DOHESSIANS) print("generating tables for both derivatives and hessians")
+
+if(DODERIVATIVES || DOHESSIANS){
 #build tables for the components of the gradient
 #iterate over lambda angles
 for(i_lambda in 0:(res_lambda-1)){
-	print(c(round(100*i_lambda/(res_lambda-1)),"% completed"))
+	print(c(round(100*i_lambda/(res_lambda)),"% completed"))
 	lambda = max_lambda*i_lambda/(res_lambda-1)
 
 
@@ -887,9 +907,11 @@ for(i_lambda in 0:(res_lambda-1)){
 		}
 	}
 }
+print(c(100,"% completed"))
+}
 
 
-print("SAVING TO FILE")
+print("saving data")
 #now, save to file
 
 source("floatconversion.R")
@@ -897,10 +919,12 @@ source("floatconversion.R")
 saveTable("dataConvex.csv",c(res_PHI,res_psi,res_lambda),headerPHIConvex, headerPsiConvex, headerLambdaConvex,dataConvex, gradientsConvex, hessiansConvex)
 saveTable("dataConcave.csv",c(res_PHI,res_psi,res_lambda),headerPHIConcave, headerPsiConcave, headerLambdaConcave,dataConcave, gradientsConcave, hessiansConcave)
 
-if(DODERIVATIVES || DOHESSIANS)
-for(i in 1:dimensions){
-	saveTable(paste0("dataConvex",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headerPHIConvex, headerPsiConvex, headerLambdaConvex,gradientsConvex[i,,,], gradientsGradientsConvex[i,,,,], hessiansGradientsConvex[i,,,,,])
-	saveTable(paste0("dataConcave",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headerPHIConcave, headerPsiConcave, headerLambdaConcave,gradientsConcave[i,,,], gradientsGradientsConcave[i,,,,], hessiansGradientsConcave[i,,,,,])
+if(DODERIVATIVES || DOHESSIANS){
+	print("saving derivatives and hessians")
+	for(i in 1:dimensions){
+		saveTable(paste0("dataConvex",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headerPHIConvex, headerPsiConvex, headerLambdaConvex,gradientsConvex[i,,,], gradientsGradientsConvex[i,,,,], hessiansGradientsConvex[i,,,,,])
+		saveTable(paste0("dataConcave",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headerPHIConcave, headerPsiConcave, headerLambdaConcave,gradientsConcave[i,,,], gradientsGradientsConcave[i,,,,], hessiansGradientsConcave[i,,,,,])
+	}
 }
 
 
