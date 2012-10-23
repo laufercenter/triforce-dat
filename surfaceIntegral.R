@@ -13,8 +13,8 @@
 
 
 FAILSAFE=TRUE
-DODERIVATIVES=FALSE
-DOHESSIANS=FALSE
+DODERIVATIVES=TRUE
+DOHESSIANS=TRUE
 
 
 #the resolution of our grid
@@ -867,95 +867,30 @@ for(i_lambda in 0:(res_lambda-1)){
 			else if(modelambdaConcave!="forward" && !isWithinLimitsConcave(PHI_concave,psi_concave,lambda-2*fd)) modelambdaConcave="forward"
 
 
-			if(FALSE){
-			back=isWithinLimitsConvex(PHI_convex-2*fd,psi_convex,lambda)			
-			forw=isWithinLimitsConvex(PHI_convex+2*fd,psi_convex,lambda)
-			if(back && forw) modePHIConvex="central"
-			else if(back && !forw) modePHIConvex="backward"
-			else if(!back && forw) modePHIConvex="forward"
-			else{
-				derivableConvex = FALSE
-				print(c("ALL PHI CONVEX INTEGRATION LIMITS INVALID FOR ",PHI_convex," ",psi_convex," ",lambda))
-			}			
-
-			back=isWithinLimitsConvex(PHI_convex,psi_convex-2*fd,lambda)			
-			forw=isWithinLimitsConvex(PHI_convex,psi_convex+2*fd,lambda)
-			if(back && forw) modepsiConvex="central"
-			else if(back && !forw) modepsiConvex="backward"
-			else if(!back && forw) modepsiConvex="forward"
-			else{
-				derivableConvex = FALSE
-				print(c("ALL PSI CONVEX INTEGRATION LIMITS INVALID FOR ",PHI_convex," ",psi_convex," ",lambda))
-			}
-						
-			back=isWithinLimitsConvex(PHI_convex,psi_convex,lambda-2*fd)			
-			forw=isWithinLimitsConvex(PHI_convex,psi_convex,lambda+2*fd)
-			if(back && forw) modelambdaConvex="central"
-			else if(back && !forw) modelambdaConvex="backward"
-			else if(!back && forw) modelambdaConvex="forward"
-			else{
-				derivableConvex = FALSE
-				print(c("ALL LAMBDA CONVEX INTEGRATION LIMITS INVALID FOR ",PHI_convex," ",psi_convex," ",lambda))
-			}			
-
-
-
-			back=isWithinLimitsConcave(PHI_concave-2*fd,psi_concave,lambda)			
-			forw=isWithinLimitsConcave(PHI_concave+2*fd,psi_concave,lambda)
-			if(back && forw) modePHIConcave="central"
-			else if(back && !forw) modePHIConcave="backward"
-			else if(!back && forw) modePHIConcave="forward"
-			else{
-				derivableConcave = FALSE
-				print(c("ALL PHI CONCAVE INTEGRATION LIMITS INVALID FOR ",PHI_concave," ",psi_concave," ",lambda))
-			}			
-
-
-			back=isWithinLimitsConcave(PHI_concave,psi_concave-2*fd,lambda)			
-			forw=isWithinLimitsConcave(PHI_concave,psi_concave+2*fd,lambda)
-			if(back && forw) modepsiConcave="central"
-			else if(back && !forw) modepsiConcave="backward"
-			else if(!back && forw) modepsiConcave="forward"
-			else{
-				derivableConcave = FALSE
-				print(c("ALL PSI CONCAVE INTEGRATION LIMITS INVALID FOR ",PHI_concave," ",psi_concave," ",lambda))
-			}			
-
-			back=isWithinLimitsConcave(PHI_concave,psi_concave,lambda-2*fd)			
-			forw=isWithinLimitsConcave(PHI_concave,psi_concave,lambda+2*fd)
-			if(back && forw) modelambdaConcave="central"
-			else if(back && !forw) modelambdaConcave="backward"
-			else if(!back && forw) modelambdaConcave="forward"
-			else{
-				derivableConcave = FALSE
-				print(c("ALL LAMBDA CONCAVE INTEGRATION LIMITS INVALID FOR ",PHI_concave," ",psi_concave," ",lambda))
-			}			
-			}
-
 			#print(c(i_PHI,i_psi,i_lambda))
 			#print(c(modePHIConcave, modepsiConcave, modelambdaConcave))
 
 			#print("gradientsConvex")
 
-			if(is.nan(dconv) || !derivableConvex) gconv = 0
+			if(is.nan(dconv) || !derivableConvex) gconv = NaN
 			else gconv = gradient(integralConvex,PHI_convex,psi_convex,lambda, modePHIConvex, modepsiConvex, modelambdaConvex)
 			gradientsConvex[,i_PHI+1, i_psi+1, i_lambda+1] = gconv
 
 			#print("gradientsConcave")
 
-			if(is.nan(dconc) || !derivableConcave) gconc = 0
+			if(is.nan(dconc) || !derivableConcave) gconc = NaN
 			else gconc = gradient(integralConcave,PHI_concave,psi_concave,lambda, modePHIConcave, modepsiConcave, modelambdaConcave)
 			gradientsConcave[,i_PHI+1, i_psi+1, i_lambda+1] = gconc
 
 			#print("hessiansConvex")
 
-			if(is.nan(dconv) || !derivableConvex) hconv = 0
+			if(is.nan(dconv) || !derivableConvex) hconv = NaN
 			else hconv = hessian(integralConvex, PHI_convex, psi_convex, lambda, modePHIConvex, modepsiConvex, modelambdaConvex)
 			hessiansConvex[,,i_PHI+1, i_psi+1, i_lambda+1] = hconv
 
 			#print("hessiansConcave")
 
-			if(is.nan(dconc) || !derivableConcave) hconc = 0
+			if(is.nan(dconc) || !derivableConcave) hconc = NaN
 			else hconc = hessian(integralConcave, PHI_concave, psi_concave, lambda, modePHIConcave, modepsiConcave, modelambdaConcave)
 			hessiansConcave[,,i_PHI+1, i_psi+1, i_lambda+1] = hconc
 
@@ -1035,6 +970,7 @@ for(i_lambda in 0:(res_lambda-1)){
 			modelambda="central"
 
 
+
 			if(i_PHI==0) modePHIConvex="forward"
 			else if(i_PHI==(res_PHI-1)) modePHIConvex="backward"
 			else modePHIConvex="central"
@@ -1054,6 +990,37 @@ for(i_lambda in 0:(res_lambda-1)){
 			if(i_lambda==0) modelambdaConcave="forward"
 			else if(i_lambda==(res_lambda-1)) modelambdaConcave="backward"
 			else modelambdaConcave="central"
+			
+			derivableConcave=TRUE
+			derivableConvex=TRUE
+
+			if(!isWithinLimitsConvex(PHI_convex+2*fd,psi_convex,lambda) && !isWithinLimitsConvex(PHI_convex-2*fd,psi_convex,lambda)) modePHIConvex="invalid"
+			else if(modePHIConvex!="backward" && !isWithinLimitsConvex(PHI_convex+2*fd,psi_convex,lambda)) modePHIConvex="backward"
+			else if(modePHIConvex!="forward" && !isWithinLimitsConvex(PHI_convex-2*fd,psi_convex,lambda)) modePHIConvex="forward"
+
+			if(!isWithinLimitsConvex(PHI_convex,psi_convex+2*fd,lambda) && !isWithinLimitsConvex(PHI_convex,psi_convex-2*fd,lambda)) modepsiConvex="invalid"
+			else if(modepsiConvex!="backward" && !isWithinLimitsConvex(PHI_convex,psi_convex+2*fd,lambda)) modepsiConvex="backward"
+			else if(modepsiConvex!="forward" && !isWithinLimitsConvex(PHI_convex,psi_convex-2*fd,lambda)) modepsiConvex="forward"
+
+			if(!isWithinLimitsConvex(PHI_convex,psi_convex,lambda+2*fd) && !isWithinLimitsConvex(PHI_convex,psi_convex,lambda-2*fd)) modelambdaConvex="invalid"
+			else if(modelambdaConvex!="backward" && !isWithinLimitsConvex(PHI_convex,psi_convex,lambda+2*fd)) modelambdaConvex="backward"
+			else if(modelambdaConvex!="forward" && !isWithinLimitsConvex(PHI_convex,psi_convex,lambda-2*fd)) modelambdaConvex="forward"
+
+
+			if(!isWithinLimitsConcave(PHI_concave+2*fd,psi_concave,lambda) && !isWithinLimitsConcave(PHI_concave-2*fd,psi_concave,lambda)) modePHIConcave="invalid"
+			else if(modePHIConcave!="backward" && !isWithinLimitsConcave(PHI_concave+2*fd,psi_concave,lambda)) modePHIConcave="backward"
+			else if(modePHIConcave!="forward" && !isWithinLimitsConcave(PHI_concave-2*fd,psi_concave,lambda)) modePHIConcave="forward"
+
+			if(!isWithinLimitsConcave(PHI_concave,psi_concave+2*fd,lambda) && !isWithinLimitsConcave(PHI_concave,psi_concave-2*fd,lambda)) modepsiConcave="invalid"
+			else if(modepsiConcave!="backward" && !isWithinLimitsConcave(PHI_concave,psi_concave+2*fd,lambda)) modepsiConcave="backward"
+			else if(modepsiConcave!="forward" && !isWithinLimitsConcave(PHI_concave,psi_concave-2*fd,lambda)) modepsiConcave="forward"
+
+			if(!isWithinLimitsConcave(PHI_concave,psi_concave,lambda+2*fd) && !isWithinLimitsConcave(PHI_concave,psi_concave,lambda-2*fd)) modelambdaConcave="invalid"
+			else if(modelambdaConcave!="backward" && !isWithinLimitsConcave(PHI_concave,psi_concave,lambda+2*fd)) modelambdaConcave="backward"
+			else if(modelambdaConcave!="forward" && !isWithinLimitsConcave(PHI_concave,psi_concave,lambda-2*fd)) modelambdaConcave="forward"
+
+
+
 
 
 			if(DODERIVATIVES){
