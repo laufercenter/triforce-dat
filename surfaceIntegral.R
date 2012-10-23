@@ -28,7 +28,7 @@ max_psi = pi
 max_PHI = pi
 
 dimensions=3
-fd=0.00001
+fd=0.01
 
 
 ex = matrix(c(1,0,0),3,1)
@@ -191,6 +191,87 @@ PHI2HalfSphereAngle <- function(PHI, psi, lambda){
 
 tmp=c(0,0)
 
+
+phiLimitPlain <-function(psi,lambda){
+	if(lambda==0) limit=0
+	else if(psi<=lambda) limit=pi/2
+	else if(psi+lambda>=pi) limit=pi/2
+	else {
+		if(psi>pi/2) psi=pi-psi
+
+		x = (cos(lambda)^2-cos(psi)^2) * csc(psi)^2
+		if(x<0){
+			print(c("INVALID LIMIT, REPLACING ",x," WITH 0"))
+			x=0
+		}
+		limit=acos(sqrt(x))
+	}
+	limit
+}
+
+
+PHILimitPlain <-function(psi,lambda){
+	reverse=FALSE
+
+	if(psi>pi/2){
+		reverse=TRUE
+		psi = pi-psi
+	}
+
+	if(lambda==0) limit=pi/2
+	else
+	if(psi==0) limit=0
+	else
+	if(psi<lambda) limit=pi/2
+	else
+	if(psi==lambda) limit=0
+	else{
+		limit = acos(cot(psi)*tan(lambda))
+	}
+
+	if(reverse){
+		limit = pi-limit
+	}
+
+
+	limit
+}
+
+arrayPHILimitPlain <-function(detail){
+	a = array(0,dim=c(detail,detail))
+
+	for(i in 1:detail){
+		psi = (i-1)*pi/(detail-1)
+
+		for(j in 1:detail){
+		lambda = (j-1)*(pi/2)/(detail-1)
+
+		a[i,j] = PHILimitPlain(psi,lambda)
+		}
+	}
+
+	a
+
+}
+
+arrayphiLimitPlain <-function(detail){
+	a = array(0,dim=c(detail,detail))
+
+	for(i in 1:detail){
+		psi = (i-1)*pi/(detail-1)
+
+		for(j in 1:detail){
+		lambda = (j-1)*(pi/2)/(detail-1)
+
+		a[i,j] = phiLimitPlain(psi,lambda)
+		}
+	}
+
+	a
+
+}
+
+
 maxPHI <- function(psi, lambda){
 	#tmp <<- c(psi,lambda)
 	hsboundary=pi
@@ -220,6 +301,8 @@ isWithingNumericalLimits <- function(x,l){
 
 halfSpherePHI <- function(psi,lambda)
 {
+	if(abs(psi-pi)<=THRESHOLD_NUMERICAL && abs(lambda-pi/2)<=THRESHOLD_NUMERICAL) res=pi/2
+	else
 	if(abs(pi/2+lambda - psi) <= THRESHOLD_NUMERICAL) res = 0
 	else
 	if(lambda==0){
@@ -307,6 +390,7 @@ arcConcave <- function(phi, psi, lambda){
 }
 
 
+
 phiLimitAbs <-function(psi,lambda){
 	#print(c(psi,lambda))
 	#if(abs(cos(psi)) >= abs(cos(lambda))) limit=pi/2
@@ -329,7 +413,7 @@ isWithinLimitsConvex <-function(PHI, psi, lambda){
 		valid=FALSE
 	}
 
-	if(PHI<0 || psi<0 || lambda<0) valid = FALSE	
+	if(PHI<0 || psi<0 || lambda<0 || PHI>max_PHI || psi > max_psi || lambda > max_lambda) valid = FALSE	
 	
 	valid
 }
@@ -349,7 +433,7 @@ isWithinLimitsConcave <-function(PHI, psi, lambda){
 
 	}
 	
-	if(PHI<0 || psi<0 || lambda<0) valid = FALSE	
+	if(PHI<0 || psi<0 || lambda<0 || PHI>max_PHI || psi > max_psi || lambda > max_lambda) valid = FALSE	
 	
 	
 	valid
@@ -368,7 +452,7 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 	#phiLimit = PHI2phi(pi/2,psi,lambda)
 
 
-	print(c("enterconvex",PHI,psi,lambda))
+	#print(c("enterconvex",PHI,psi,lambda))
 	A=0
 
 	#if the integration origin is inside the circular area, we have to be careful how the integration limits are set
@@ -379,7 +463,7 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 		#else{
 
 
-			phiLimit = phiLimitAbs(psi,lambda)
+			phiLimit = phiLimitPlain(psi,lambda)
 		
 			if(PHI==0) phi=pi
 
@@ -413,23 +497,27 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 		#}
 		#else{
 		
-			phiLimit = phiLimitAbs(psi,lambda)
-			PHILimit = maxPHI(psi,lambda)
+			phiLimit = phiLimitPlain(psi,lambda)
+			PHILimit = PHILimitPlain(psi,lambda)
 
 			#print(c("row1",phi,phiLimit,PHILimit))
 
 			#for the convex case
 			if(PHI < PHILimit){
 				A = A - abs(integrate(arcConcave,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
+				#print(abs(integrate(arcConcave,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val))
 				ip=phiLimit
 			}
 			else ip=phi
 			
 			A = A + abs(integrate(arcConvex,lower=0,upper=ip,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
+			#print(abs(integrate(arcConvex,lower=0,upper=ip,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
 		#}
 	}
 	A
 }
+
+
 
 integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 	#convert PHI to phi
@@ -438,7 +526,7 @@ integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 	#calculate the maximal phi value to which we can integrate
 	#phiLimit = PHI2phi(pi/2,psi,lambda)
 
-	print(c("enterconcave",PHI,psi,lambda))
+	#print(c("enterconcave",PHI,psi,lambda))
 
 	A=0
 
@@ -453,16 +541,16 @@ integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 		#	A = NaN
 		#}
 		#else{
-			if(psi+THRESHOLD_NUMERICAL>=pi && lambda+THRESHOLD_NUMERICAL>=pi/2){
-				A = -PHI
-				A = NaN
-				A = 0
-			}
-			else{
+			#if(psi+THRESHOLD_NUMERICAL>=pi && lambda+THRESHOLD_NUMERICAL>=pi/2){
+			#	A = -PHI
+			#	A = NaN
+			#	A = 0
+			#}
+			#else{
 
-				phiLimit = phiLimitAbs(psi,lambda)
-				PHILimit = maxPHI(psi,lambda)
-			print(c("row1",phi,phiLimit,PHILimit))
+				phiLimit = phiLimitPlain(psi,lambda)
+				PHILimit = PHILimitPlain(psi,lambda)
+			#print(c("row1",phi,phiLimit,PHILimit))
 
 				if(PHI > PHILimit){
 					A = A + abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
@@ -471,7 +559,7 @@ integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 				else ip=phi
 				
 				A = A - abs(integrate(arcConcave,lower=0,upper=ip,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
-			}
+			#}
 		#}
 
 	}
@@ -541,16 +629,19 @@ gradient <- function(integrator, PHI, psi, lambda, modePHI, modepsi, modelambda,
 		central={pfd_PHI=fd; nfd_PHI= -fd; cfd_PHI=0},
 		forward={pfd_PHI=2*fd; nfd_PHI=0; cfd_PHI=fd},
 		backward={pfd_PHI=0; nfd_PHI= -2*fd; cfd_PHI= -fd},
+		invalid={pfd_PHI=0; nfd_PHI= 0; cfd_PHI= 0},
 	)
 	switch(modepsi, 
 		central={pfd_psi=fd; nfd_psi= -fd; cfd_psi=0},
 		forward={pfd_psi=2*fd; nfd_psi=0; cfd_psi=fd},
 		backward={pfd_psi=0; nfd_psi= -2*fd; cfd_psi= -fd},
+		invalid={pfd_psi=0; nfd_psi= 0; cfd_psi= 0},
 	)
 	switch(modelambda, 
 		central={pfd_lambda=fd; nfd_lambda= -fd; cfd_lambda=0},
 		forward={pfd_lambda=2*fd; nfd_lambda=0; cfd_lambda=fd},
 		backward={pfd_lambda=0; nfd_lambda= -2*fd; cfd_lambda= -fd},
+		invalid={pfd_lambda=0; nfd_lambda= 0; cfd_lambda= 0},
 	)
 
 
@@ -572,16 +663,19 @@ hessian <- function(integrator, PHI, psi, lambda, modePHI, modepsi, modelambda, 
 		central={pfd_PHI=fd; nfd_PHI= -fd; cfd_PHI=0},
 		forward={pfd_PHI=2*fd; nfd_PHI=0; cfd_PHI=fd},
 		backward={pfd_PHI=0; nfd_PHI= -2*fd; cfd_PHI= -fd},
+		invalid={pfd_PHI=0; nfd_PHI= 0; cfd_PHI= 0},
 	)
 	switch(modepsi, 
 		central={pfd_psi=fd; nfd_psi= -fd; cfd_psi=0},
 		forward={pfd_psi=2*fd; nfd_psi=0; cfd_psi=fd},
 		backward={pfd_psi=0; nfd_psi= -2*fd; cfd_psi= -fd},
+		invalid={pfd_psi=0; nfd_psi= 0; cfd_psi= 0},
 	)
 	switch(modelambda, 
 		central={pfd_lambda=fd; nfd_lambda= -fd; cfd_lambda=0},
 		forward={pfd_lambda=2*fd; nfd_lambda=0; cfd_lambda=fd},
 		backward={pfd_lambda=0; nfd_lambda= -2*fd; cfd_lambda= -fd},
+		invalid={pfd_lambda=0; nfd_lambda= 0; cfd_lambda= 0},
 	)
 
 
@@ -708,8 +802,8 @@ for(i_lambda in 0:(res_lambda-1)){
 			headerPHIConcave[i_PHI+1, i_psi+1, i_lambda+1]=PHI_concave
 
 
-			print(c("convex: ",i_PHI,PHI_convex,i_psi,psi_convex,i_lambda,lambda))
-			print(c("concave: ",i_PHI,PHI_concave,i_psi,psi_concave,i_lambda,lambda))
+			#print(c("convex: ",i_PHI,PHI_convex,i_psi,psi_convex,i_lambda,lambda))
+			#print(c("concave: ",i_PHI,PHI_concave,i_psi,psi_concave,i_lambda,lambda))
 
 			#print("dataConvex")
 			dconv = integralConvex(PHI_convex,psi_convex,lambda)
@@ -747,6 +841,33 @@ for(i_lambda in 0:(res_lambda-1)){
 			derivableConcave=TRUE
 			derivableConvex=TRUE
 
+			if(!isWithinLimitsConvex(PHI_convex+2*fd,psi_convex,lambda) && !isWithinLimitsConvex(PHI_convex-2*fd,psi_convex,lambda)) modePHIConvex="invalid"
+			else if(modePHIConvex!="backward" && !isWithinLimitsConvex(PHI_convex+2*fd,psi_convex,lambda)) modePHIConvex="backward"
+			else if(modePHIConvex!="forward" && !isWithinLimitsConvex(PHI_convex-2*fd,psi_convex,lambda)) modePHIConvex="forward"
+
+			if(!isWithinLimitsConvex(PHI_convex,psi_convex+2*fd,lambda) && !isWithinLimitsConvex(PHI_convex,psi_convex-2*fd,lambda)) modepsiConvex="invalid"
+			else if(modepsiConvex!="backward" && !isWithinLimitsConvex(PHI_convex,psi_convex+2*fd,lambda)) modepsiConvex="backward"
+			else if(modepsiConvex!="forward" && !isWithinLimitsConvex(PHI_convex,psi_convex-2*fd,lambda)) modepsiConvex="forward"
+
+			if(!isWithinLimitsConvex(PHI_convex,psi_convex,lambda+2*fd) && !isWithinLimitsConvex(PHI_convex,psi_convex,lambda-2*fd)) modelambdaConvex="invalid"
+			else if(modelambdaConvex!="backward" && !isWithinLimitsConvex(PHI_convex,psi_convex,lambda+2*fd)) modelambdaConvex="backward"
+			else if(modelambdaConvex!="forward" && !isWithinLimitsConvex(PHI_convex,psi_convex,lambda-2*fd)) modelambdaConvex="forward"
+
+
+			if(!isWithinLimitsConcave(PHI_concave+2*fd,psi_concave,lambda) && !isWithinLimitsConcave(PHI_concave-2*fd,psi_concave,lambda)) modePHIConcave="invalid"
+			else if(modePHIConcave!="backward" && !isWithinLimitsConcave(PHI_concave+2*fd,psi_concave,lambda)) modePHIConcave="backward"
+			else if(modePHIConcave!="forward" && !isWithinLimitsConcave(PHI_concave-2*fd,psi_concave,lambda)) modePHIConcave="forward"
+
+			if(!isWithinLimitsConcave(PHI_concave,psi_concave+2*fd,lambda) && !isWithinLimitsConcave(PHI_concave,psi_concave-2*fd,lambda)) modepsiConcave="invalid"
+			else if(modepsiConcave!="backward" && !isWithinLimitsConcave(PHI_concave,psi_concave+2*fd,lambda)) modepsiConcave="backward"
+			else if(modepsiConcave!="forward" && !isWithinLimitsConcave(PHI_concave,psi_concave-2*fd,lambda)) modepsiConcave="forward"
+
+			if(!isWithinLimitsConcave(PHI_concave,psi_concave,lambda+2*fd) && !isWithinLimitsConcave(PHI_concave,psi_concave,lambda-2*fd)) modelambdaConcave="invalid"
+			else if(modelambdaConcave!="backward" && !isWithinLimitsConcave(PHI_concave,psi_concave,lambda+2*fd)) modelambdaConcave="backward"
+			else if(modelambdaConcave!="forward" && !isWithinLimitsConcave(PHI_concave,psi_concave,lambda-2*fd)) modelambdaConcave="forward"
+
+
+			if(FALSE){
 			back=isWithinLimitsConvex(PHI_convex-2*fd,psi_convex,lambda)			
 			forw=isWithinLimitsConvex(PHI_convex+2*fd,psi_convex,lambda)
 			if(back && forw) modePHIConvex="central"
@@ -809,7 +930,7 @@ for(i_lambda in 0:(res_lambda-1)){
 				derivableConcave = FALSE
 				print(c("ALL LAMBDA CONCAVE INTEGRATION LIMITS INVALID FOR ",PHI_concave," ",psi_concave," ",lambda))
 			}			
-
+			}
 
 			#print(c(i_PHI,i_psi,i_lambda))
 			#print(c(modePHIConcave, modepsiConcave, modelambdaConcave))
