@@ -13,13 +13,13 @@
 
 
 FAILSAFE=TRUE
-DODERIVATIVES=TRUE
+DODERIVATIVES=FALSE
 
 
 #the resolution of our grid
-res_lambda = 12
-res_psi = 12
-res_PHI = 12
+res_lambda = 24
+res_psi = 24
+res_PHI = 24
 
 #limits for the parameters
 max_lambda = pi/2
@@ -144,6 +144,7 @@ PHI2phi <- function(PHI, psi, lambda){
 	if(lambda==0)	res=0
 	else if(psi==lambda && PHI==0) res=pi/2
 	else if(PHI==0) res=0
+	else if(isWithingNumericalLimits(psi+lambda,pi) && isWithingNumericalLimits(PHI,pi)) res=pi
 	else{
 		border = mvMultiply(rotz(-lambda), ex)
 		v = mvMultiply(rotz(-psi), ex)
@@ -196,7 +197,7 @@ tmp=c(0,0)
 phiLimitPlain <-function(psi,lambda){
 	if(lambda==0) limit=0
 	else if(psi<=lambda) limit=pi/2
-	else if(psi+lambda>=pi) limit=pi
+	else if(psi+lambda>=pi) limit=pi/2
 	else {
 		if(psi>pi/2) psi=pi-psi
 
@@ -214,7 +215,13 @@ phiLimitPlain <-function(psi,lambda){
 PHILimitPlain <-function(psi,lambda){
 	reverse=FALSE
 
-	if(psi+lambda>=pi) limit = pi
+	if(psi+lambda>pi){
+		limit = acos(tan(psi)*cot(lambda))
+	}
+	else
+	if(psi+lambda==pi){
+		limit = pi
+	}
 	else{
 
 		if(psi>pi/2){
@@ -408,6 +415,28 @@ phiLimitAbs <-function(psi,lambda){
 }
 
 
+isAtPositiveConcaveDiscontinuity <-function(i_psi,i_lambda){
+	b=FALSE
+	if(i_psi+1 < res_psi){
+		if(isWithingNumericalLimits(headerPsiConcave[i_psi+2]+headerLambdaConcave[i_lambda+1],pi)) b=TRUE
+	}
+	if(i_lambda+1 < res_lambda){
+		if(isWithingNumericalLimits(headerPsiConcave[i_psi+1]+headerLambdaConcave[i_lambda+2],pi)) b=TRUE
+	}
+	b
+}
+
+isAtNegativeConcaveDiscontinuity <-function(i_psi,i_lambda){
+	b=FALSE
+	if(isWithingNumericalLimits(headerPsiConcave[i_psi+1]+headerLambdaConcave[i_lambda+1],pi)) b=TRUE
+	if(i_psi > 0){
+		if(isWithingNumericalLimits(headerPsiConcave[i_psi]+headerLambdaConcave[i_lambda+1],pi)) b=TRUE
+	}
+	if(i_lambda > 0){
+		if(isWithingNumericalLimits(headerPsiConcave[i_psi+1]+headerLambdaConcave[i_lambda],pi)) b=TRUE
+	}
+	b
+}
 
 
 isWithinLimitsConvex <-function(PHI, psi, lambda){
@@ -486,7 +515,13 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 		#}
 		
 	}
+	else if(psi+lambda>=pi){
+		A = NaN
+	}
 	else{
+
+
+
 		#there are no convex regions above pi/2 (they are handled by the mirror-side)
 
 		#we reject every PHI that is "on the other side of the half-sphere"
@@ -558,30 +593,31 @@ integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 	
 	}
 	else{
-		#if(FAILSAFE && PHI2HalfSphereAngle(PHI,psi,lambda)-THRESHOLD_NUMERICAL > pi/2){
-		#	A = NaN
-		#}
-		#else{
-			#if(psi+THRESHOLD_NUMERICAL>=pi && lambda+THRESHOLD_NUMERICAL>=pi/2){
-			#	A = -PHI
-			#	A = NaN
-			#	A = 0
-			#}
-			#else{
 
-				phiLimit = phiLimitPlain(psi,lambda)
-				PHILimit = PHILimitPlain(psi,lambda)
-			#print(c("row1",phi,phiLimit,PHILimit))
+		phiLimit = phiLimitPlain(psi,lambda)
+		PHILimit = PHILimitPlain(psi,lambda)
+		#print(c("row1",phi,phiLimit,PHILimit))
 
-				if(PHI > PHILimit){
-					A = A + abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
-					ip=phiLimit
-				}
-				else ip=phi
-				
-				A = A - abs(integrate(arcConcave,lower=0,upper=ip,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
-			#}
-		#}
+		if(psi+lambda >= pi){
+			if(PHI >= PHILimit || isWithingNumericalLimits(PHI,PHILimit)){
+				A = A - abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
+				ip=phiLimit
+			}
+			else ip=phi
+			
+			A = A - abs(integrate(arcConcave,lower=0,upper=ip,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
+		}
+		else{
+
+
+			if(PHI > PHILimit){
+				A = A + abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
+				ip=phiLimit
+			}
+			else ip=phi
+			
+			A = A - abs(integrate(arcConcave,lower=0,upper=ip,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
+		}
 
 	}
 	
@@ -762,14 +798,43 @@ headerPsiConcave=array(0,dim=c(res_psi))
 headerPHIConcave=array(0,dim=c(res_PHI))
 
 
-
-#iterate over lambda angles
+#first create the header
 for(i_lambda in 0:(res_lambda-1)){
-	print(c(round(100*i_lambda/(res_lambda)),"% completed"))
 	lambda = max_lambda*i_lambda/(res_lambda-1)
 
 	headerLambdaConvex[i_lambda+1]=lambda
 	headerLambdaConcave[i_lambda+1]=lambda
+
+	#iterate over psi angles
+	for(i_psi in 0:(res_psi-1)){
+
+		psi_convex = (i_psi * (max_psi)/(res_psi-1))
+		psi_concave = (i_psi * (max_psi)/(res_psi-1))
+
+		headerPsiConvex[i_psi+1]=psi_convex
+		headerPsiConcave[i_psi+1]=psi_concave
+
+		for(i_PHI in 0:(res_PHI-1)){
+			PHI_convex = max_PHI * i_PHI/(res_PHI-1)
+			PHI_concave = max_PHI * i_PHI/(res_PHI-1)
+
+			headerPHIConvex[i_PHI+1]=PHI_convex
+			headerPHIConcave[i_PHI+1]=PHI_concave
+		}
+	}
+}
+
+
+#iterate over lambda angles
+for(i_lambda in 0:(res_lambda-1)){
+	print(c(round(100*i_lambda/(res_lambda)),"% completed"))
+
+	lambda = max_lambda*i_lambda/(res_lambda-1)
+
+
+	#lambda==0 will not occur in reality. this point would have extreme derivatives, so we start with a circle of very small radius instead
+	lambda = max(0.01,lambda)
+
 
 
 	#iterate over psi angles
@@ -779,8 +844,6 @@ for(i_lambda in 0:(res_lambda-1)){
 		psi_concave = (i_psi * (max_psi)/(res_psi-1))
 
 
-		headerPsiConvex[i_psi+1]=psi_convex
-		headerPsiConcave[i_psi+1]=psi_concave
 
 
 
@@ -788,8 +851,6 @@ for(i_lambda in 0:(res_lambda-1)){
 			PHI_convex = max_PHI * i_PHI/(res_PHI-1)
 			PHI_concave = max_PHI * i_PHI/(res_PHI-1)
 
-			headerPHIConvex[i_PHI+1]=PHI_convex
-			headerPHIConcave[i_PHI+1]=PHI_concave
 
 
 			#print(c("convex: ",i_PHI,PHI_convex,i_psi,psi_convex,i_lambda,lambda))
@@ -852,6 +913,14 @@ for(i_lambda in 0:(res_lambda-1)){
 			if(!isWithinLimitsConcave(PHI_concave+2*fd,psi_concave,lambda) && !isWithinLimitsConcave(PHI_concave-2*fd,psi_concave,lambda)) modePHIConcave="invalid"
 			else if(modePHIConcave!="backward" && !isWithinLimitsConcave(PHI_concave+2*fd,psi_concave,lambda)) modePHIConcave="backward"
 			else if(modePHIConcave!="forward" && !isWithinLimitsConcave(PHI_concave-2*fd,psi_concave,lambda)) modePHIConcave="forward"
+
+
+			if(modepsiConcave!="backward" && isAtPositiveConcaveDiscontinuity(i_psi,i_lambda)) modepsiConcave="backward"
+			else if(modepsiConcave!="forward" && isAtNegativeConcaveDiscontinuity(i_psi,i_lambda)) modepsiConcave="forward"
+
+			if(modelambdaConcave!="backward" && isAtPositiveConcaveDiscontinuity(i_psi,i_lambda)) modelambdaConcave="backward"
+			else if(modelambdaConcave!="forward" && isAtNegativeConcaveDiscontinuity(i_psi,i_lambda)) modelambdaConcave="forward"
+
 
 			if(!isWithinLimitsConcave(PHI_concave,psi_concave+2*fd,lambda) && !isWithinLimitsConcave(PHI_concave,psi_concave-2*fd,lambda)) modepsiConcave="invalid"
 			else if(modepsiConcave!="backward" && !isWithinLimitsConcave(PHI_concave,psi_concave+2*fd,lambda)) modepsiConcave="backward"
