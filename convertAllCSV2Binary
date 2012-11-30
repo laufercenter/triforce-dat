@@ -9,5 +9,4 @@
 ./convertCSV2Binary.py dataConcave0.csv dataConcave0.dat
 ./convertCSV2Binary.py dataConcave1.csv dataConcave1.dat
 ./convertCSV2Binary.py dataConcave2.csv dataConcave2.dat
-#./convertCSV2Binary.py ipelimination0.csv ipelimination0.dat
-#./convertCSV2Binary.py ipelimination1.csv ipelimination1.dat
+./convertCSV2Binary.py dataPHI.csv dataPHI.dat

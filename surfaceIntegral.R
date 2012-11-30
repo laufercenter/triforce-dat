@@ -27,7 +27,7 @@ max_psi = pi
 max_PHI = pi
 
 dimensions=3
-fd=0.01
+fd=0.025
 
 
 ex = matrix(c(1,0,0),3,1)
@@ -126,7 +126,7 @@ dot <- function(a,b){
 }
 
 #normalization of a vector
-normalize <- function(a){
+normalise <- function(a){
 	a / sqrt(c(t(a) %*% a))
 }
 
@@ -144,7 +144,7 @@ PHI2phi <- function(PHI, psi, lambda){
 	if(lambda==0)	res=0
 	else if(psi==lambda && PHI==0) res=pi/2
 	else if(PHI==0) res=0
-	else if(isWithingNumericalLimits(psi+lambda,pi) && isWithingNumericalLimits(PHI,pi)) res=pi
+	else if(isWithinNumericalLimits(psi+lambda,pi) && isWithinNumericalLimits(PHI,pi)) res=pi
 	else{
 		border = mvMultiply(rotz(-lambda), ex)
 		v = mvMultiply(rotz(-psi), ex)
@@ -154,7 +154,7 @@ PHI2phi <- function(PHI, psi, lambda){
 		ip = ex + aRot
 	
 		nIntersection = crossproduct(v,ip)
-		nIntersection = normalize(nIntersection)
+		nIntersection = normalise(nIntersection)
 		phiIntersection = normalAngle(nIntersection,nOrigin)
 		res = phiIntersection
 	}
@@ -180,7 +180,7 @@ PHI2HalfSphereAngle <- function(PHI, psi, lambda){
 	ip = ex + aRot
 	ipv = mvMultiply(rotz(psi),ip)
 
-	res = normalAngle(normalize(ipv),ex)
+	res = normalAngle(normalise(ipv),ex)
 	
 
 
@@ -303,7 +303,7 @@ maxPHI <- function(psi, lambda){
 	res
 }
 
-isWithingNumericalLimits <- function(x,l){
+isWithinNumericalLimits <- function(x,l){
 	if(abs(x-l)<=THRESHOLD_NUMERICAL) r = TRUE
 	else r = FALSE
 	
@@ -328,9 +328,9 @@ halfSpherePHI <- function(psi,lambda)
 	
 		v = mvMultiply(rotx(rho),ey)
 		n = mvMultiply(rotz(psi),ex) * cos(lambda)
-		t0 = normalize(v-n)
+		t0 = normalise(v-n)
 		v2 = mvMultiply(rotz(psi-lambda),ex)
-		t1 = normalize(v2-n)
+		t1 = normalise(v2-n)
 		res = normalAngle(t0,t1)
 	}
 	
@@ -418,22 +418,22 @@ phiLimitAbs <-function(psi,lambda){
 isAtPositiveConcaveDiscontinuity <-function(i_psi,i_lambda){
 	b=FALSE
 	if(i_psi+1 < res_psi){
-		if(isWithingNumericalLimits(headerPsiConcave[i_psi+2]+headerLambdaConcave[i_lambda+1],pi)) b=TRUE
+		if(isWithinNumericalLimits(headerPsiConcave[i_psi+2]+headerLambdaConcave[i_lambda+1],pi)) b=TRUE
 	}
 	if(i_lambda+1 < res_lambda){
-		if(isWithingNumericalLimits(headerPsiConcave[i_psi+1]+headerLambdaConcave[i_lambda+2],pi)) b=TRUE
+		if(isWithinNumericalLimits(headerPsiConcave[i_psi+1]+headerLambdaConcave[i_lambda+2],pi)) b=TRUE
 	}
 	b
 }
 
 isAtNegativeConcaveDiscontinuity <-function(i_psi,i_lambda){
 	b=FALSE
-	if(isWithingNumericalLimits(headerPsiConcave[i_psi+1]+headerLambdaConcave[i_lambda+1],pi)) b=TRUE
+	if(isWithinNumericalLimits(headerPsiConcave[i_psi+1]+headerLambdaConcave[i_lambda+1],pi)) b=TRUE
 	if(i_psi > 0){
-		if(isWithingNumericalLimits(headerPsiConcave[i_psi]+headerLambdaConcave[i_lambda+1],pi)) b=TRUE
+		if(isWithinNumericalLimits(headerPsiConcave[i_psi]+headerLambdaConcave[i_lambda+1],pi)) b=TRUE
 	}
 	if(i_lambda > 0){
-		if(isWithingNumericalLimits(headerPsiConcave[i_psi+1]+headerLambdaConcave[i_lambda],pi)) b=TRUE
+		if(isWithinNumericalLimits(headerPsiConcave[i_psi+1]+headerLambdaConcave[i_lambda],pi)) b=TRUE
 	}
 	b
 }
@@ -599,7 +599,7 @@ integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 		#print(c("row1",phi,phiLimit,PHILimit))
 
 		if(psi+lambda >= pi){
-			if(PHI >= PHILimit || isWithingNumericalLimits(PHI,PHILimit)){
+			if(PHI >= PHILimit || isWithinNumericalLimits(PHI,PHILimit)){
 				A = A - abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
 				ip=phiLimit
 			}
