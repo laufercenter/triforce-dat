@@ -1,3 +1,6 @@
+REHASH = TRUE
+DERIVATIVES = FALSE
+
 res_gj = 12
 res_gk = 12
 res_cosrho = 12
@@ -11,11 +14,16 @@ max_gk = 1
 min_cosrho = -1
 max_cosrho = 1
 
-fd = 0.0001
+fd = 0.01
+
+parameter_gj_log = 1
+parameter_gk_log = 1
+parameter_cosrho_log = 50
 
 dimensions = 3
-if(FALSE){
+if(REHASH){
 data = array(0,dim=c(res_gj, res_gk, res_cosrho))
+data_raw = array(0,dim=c(res_gj, res_gk, res_cosrho))
 gradients = array(0,dim=c(dimensions,res_gj, res_gk, res_cosrho))
 hessians = array(0,dim=c(dimensions, dimensions, res_gj, res_gk, res_cosrho))
 
@@ -30,7 +38,7 @@ ez = c(0,0,1)
 
 
 THRESHOLD_NUMERICAL = 0.0001
-MINISCULE = 0.01
+MINISCULE = 0.00001
 
 
 library("cubature")
@@ -61,8 +69,7 @@ rotationalAngle <-function(nI, nJ){
 
 	print(c("a: ",a))
 
-	if(sn<0 && a>0) a = pi-a
-	if(sn<0 && a<0) a = -pi-a
+	a = (1-sn)*pi + sn * asin(dot(n0,n1))
 
 	
 	a
@@ -142,25 +149,79 @@ isWithinLimits <-function(g_j, g_k, cosrho){
 	r
 }
 
-calculatePHI <- function(g_j, g_k, cosrho, modegj, modegk, modecosrho, i,branch=0){
-	#print(c("entering",gj,gk,cosrho))
+csc <- function(x){
+	1/sin(x)
+}
 
-	lambda_j = acos(g_j)
-	lambda_k = acos(g_k)
+cot <- function(x){
+	1/tan(x)
+}
 
+
+
+calculatePHI2 <- function(g_j, g_k, cosrho){
+	lambda_j=acos(g_j)
+	lambda_k=acos(g_k)
 	rho = acos(cosrho)
-	if(isWithinNumericalLimits(rho,0)) rho=MINISCULE
+
+	eta = pi/2 - acos(-cot(lambda_j)*cot(rho)+cos(lambda_k)*csc(lambda_j)*csc(rho))
+
+	eta
+}
+
+
+calculatePHI <- function(g_j, g_k, cosrho, modegj, modegk, modecosrho, i,branch=0){
+	if(isWithinNumericalLimits(g_j,0)) g_j=g_j+MINISCULE
+	if(isWithinNumericalLimits(g_j,1)) g_j=g_j-MINISCULE
+	if(isWithinNumericalLimits(g_k,0)) g_k=g_k+MINISCULE
+	if(isWithinNumericalLimits(g_k,1)) g_k=g_k-MINISCULE
+
+	lambda_j=acos(g_j)
+	lambda_k=acos(g_k)
+	
+	min_value_cosrho = cos(lambda_j+lambda_k) + MINISCULE
+
+	if(lambda_j > lambda_k) max_value_cosrho = cos(lambda_j-lambda_k) - MINISCULE
+	else max_value_cosrho = cos(lambda_k-lambda_j) - MINISCULE
 
 	
 
-	if(rho >= lambda_j+lambda_k || rho+lambda_j < lambda_k || rho+lambda_k < lambda_j){
-		PHI = NaN
+	#print(c(min_value_cosrho,max_value_cosrho, lambda_j,lambda_k))
+
+
+	#gj = log(parameter_gj_log*max_gj*i_gj/(res_gj-1)+1) / log(parameter_gj_log*max_gj*(res_gj-1)/(res_gj-1)+1)
+
+
+	#if(i_cosrho < res_cosrho/2){
+	#	cosrho = (log(parameter_cosrho_log*(max_value_cosrho-min_value_cosrho) * i_cosrho/(res_cosrho-1)+1)+min_value_cosrho) / (log(parameter_cosrho_log*(max_value_cosrho-min_value_cosrho) * (res_cosrho-1)/(res_cosrho-1)+1)+min_value_cosrho)
+	#}
+	#else{
+	#	cosrho = (log(parameter_cosrho_log*(max_value_cosrho-min_value_cosrho) * i_cosrho/(res_cosrho-1)+min_value_cosrho+1)) / (log(parameter_cosrho_log*(max_value_cosrho-min_value_cosrho) * (res_cosrho-1)/(res_cosrho-1)+min_value_cosrho+1))
+	#}
+
+
+
+	#print(c("entering",gj,gk,cosrho))
+
+
+	if(cosrho>1){
+		#print("perturbation error in cosrho",cosrho)
+		cosrho=1
 	}
-	else{
-		if(g_j == g_k && (cosrho == -1 || cosrho == 1)){
-			PHI = NaN
-		}
-		else{
+	rho = acos(cosrho)
+
+	if(isWithinNumericalLimits(rho,0)) rho = rho + MINISCULE
+	if(isWithinNumericalLimits(rho,1)) rho = rho - MINISCULE
+
+
+	#print(c("rho",cosrho,rho))
+
+	#if(isWithinNumericalLimits(g_j,g_k) && isWithinNumericalLimits(rho,0)){
+	#	PHI = pi/2
+	#}
+	#else
+	{
+
 			#print(c("starting",gj,gk,rho))
 			#projection
 			r_i = 1;
@@ -176,41 +237,39 @@ calculatePHI <- function(g_j, g_k, cosrho, modegj, modegk, modecosrho, i,branch=
 			tau_jk = (g_j - g_k * cos(rho)) / ((sin(rho)^2))
 
 
+			#print(c("tau:",tau_jk,tau_kj))
 
 
 			eta_jk = eta_kj = (mu_k * tau_kj) + (mu_j * tau_jk)
 
 
 
-			omega_kj = crossproduct(mu_k, mu_j) / sin(rho)
-			omega_jk = crossproduct(mu_j, mu_k) / sin(rho)
+			#omega_kj = crossproduct(mu_k, mu_j) / sin(rho)
+			#omega_jk = crossproduct(mu_j, mu_k) / sin(rho)
+
+			omega_jk = c(1,0,0)
 
 
-			gamma_kj = sqrt(r_i * r_i - g_k*tau_kj - g_j*tau_jk)
-			gamma_jk = sqrt(r_i * r_i - g_j*tau_jk - g_k*tau_kj)
 
-			if(branch==0) x0 = (omega_jk * gamma_jk) + eta_jk
-			else x0 = (omega_kj * gamma_kj) + eta_kj
+			#gamma_kj = sqrt(r_i * r_i - g_k*tau_kj - g_j*tau_jk)
+			s = r_i * r_i - g_j*tau_jk - g_k*tau_kj
+			if(s<0){
+				#print(c("perturbation error: ",s))
+				s = 0
+			}
+			gamma_jk = sqrt(s)
+
+			x0 = (omega_jk * gamma_jk) + eta_jk
+			#else x0 = (omega_kj * gamma_kj) + eta_kj
+
 
 			#print(x0)
 
-			if(isWithinNumericalLimits(x0[1],1) && isWithinNumericalLimits(x0[2],0) && isWithinNumericalLimits(x0[3],0))
-				PHI=0
-			else{
+			#if(isWithinNumericalLimits(x0[1],1) && isWithinNumericalLimits(x0[2],0) && isWithinNumericalLimits(x0[3],0))
+			#	PHI=0
+			#else{
 				#measurement points
 
-				if(isWithinNumericalLimits(g_j,0)){
-					o = ex
-					v = ey
-					s = normalise(crossproduct(v,o))
-					s = s
-					p0 = s
-					
-					s2 = normalise(-crossproduct(v,s))
-					s2 = s2
-					p1 = s2
-				}
-				else{
 					o = ex
 					v = ey * g_j
 					s = normalise(crossproduct(v,o))
@@ -220,34 +279,33 @@ calculatePHI <- function(g_j, g_k, cosrho, modegj, modegk, modecosrho, i,branch=
 					s2 = normalise(-crossproduct(v,s))
 					s2 = a_j*s2
 					p1 = v+s2
-				}
+					#print(c("-s-:",s,s2,o,v))
 
 				
 
 				#PHI
-				if(isWithinNumericalLimits(g_j,0)){
-					vx = x0
-					vp0 = p0
-					vp1 = p1
-				}
-				else{
 					vx = x0-v
 					vp0 = p0-v
 					vp1 = p1-v
-				}
 
 				eta = angle(vp1,vx)
+
+				#print(c("eta",eta))
 				
 				sn = sign(dot(vp0,vx))
 
+				#print(c("sn",sn))
 
 				
 				if(sn > 0) eta = -eta
+				#if(isWithinNumericalLimits(g_j,1)) eta = -eta
 				
 
 				PHI = eta
-			}
-		}
+
+				#print(c("PHI",PHI))
+
+			#}
 	}
 
 
@@ -349,7 +407,7 @@ interpolate <-function(sp,x){
 	p = c(headerGj[sp[1]],headerGk[sp[2]],headerCosrho[sp[3]])
 	f = data[sp[1],sp[2],sp[3]]
 	g = gradients[,sp[1],sp[2],sp[3]]
-	d = x-p
+	d = c(x-p)
 	v =  f + dot(g,d)
 	v
 }
@@ -368,9 +426,12 @@ weights <-function(x,sps){
 	wghts=array(0,0)
 	for(i in 1:nrow(sps)){
 		sp = c(sps[i,])
+		p_sp = c(headerGj[sp[1]],headerGk[sp[2]],headerCosrho[sp[3]])
 		d=c(0,0,0)
-		for(j in 1:3)
-			d[j]=(abs(sp[j]-x[j]) / lengths[j])
+		for(j in 1:3){
+			d[j]=(abs(p_sp[j]-x[j]) / lengths[j])
+			#print(abs(p_sp[j]-x[j]))
+		}
 		w = 1.0-max(d)
 		maxw=maxw+w
 		wghts = c(wghts,w)
@@ -380,132 +441,261 @@ weights <-function(x,sps){
 	wghts
 }
 
-
-calculateInterpolationError <- function(xd, dimensions, v, g, sps, point, ul){
-	p=point
-
-
-	limit = c(headerGj[p[1]],headerGk[p[2]],headerCosrho[p[3]])
-	x = c(headerGj[p[1]],headerGk[p[2]],headerCosrho[p[3]])
-	j=1
-	for(i in 1:3){
-		if(dimensions[i] == 1){
-			x[i] = xd[j]
-			limit[i] = ul[j]
-			j = j +1
-		}
+calculateInterpolationArea <- function(x){
+	if(isWithinLimits(x[1],x[2],x[3])){
+		a = 1
 	}
+	else a = 0
+	a
+}
 
-
+calculateInterpolationError2 <- function(x, v, g, sps, base){
 	#print(c(x[1],x[2],x[3]))
+	#print("interpolation")
 	if(isWithinLimits(x[1],x[2],x[3])){
 		realv = calculatePHI(x[1],x[2],x[3])
-		extsps = rbind(sps,matrix(p,1,3))
+		#print(realv)
+		extsps = rbind(sps,matrix(base,1,3))
 
 		wghts = weights(x,extsps)
 		intv = 0
-		for(i in nrow(sps)){
+		for(i in 1:nrow(sps)){
 			sp = c(sps[i,])
 			v = interpolate(sp,x)
 			intv = intv + wghts[i] * v
 			
 		}
-		v = interpolate2(p,v, g, x)
+		v = interpolate2(base,v, g, x)
 		intv = intv + wghts[length(wghts)] * v
+
+		#print(c(realv,intv))
+		#print(wghts)
 				
 
 		
 		e = (realv - intv)^2
 
-		#sw = (1/dot(x-limit,x-limit)) ^2
-
-		#e = e/sw
-
-
+		#e = (realv - intv)^2 + (realv - v)^2
 
 		
 	}
 	else e = 0
-	#print(e)
 	e
 }
 
-integrateInterpolationError <-function(x,dimensions, sps, point, lowerLimit, upperLimit){
-	v = x[1]
 
-	g = c(0,0,0)
-	j=2
-	for(i in 1:3){
-		if(dimensions[i] == 1){
-			g[i] = x[j]
-			j = j +1
-		}
+calculateInterpolationError <- function(x, v, g, sps, base){
+	#print(c(x[1],x[2],x[3]))
+	#print("interpolation")
+	if(isWithinLimits(x[1],x[2],x[3])){
+		realv = calculatePHI(x[1],x[2],x[3])
+		intv = interpolate2(base,v, g, x)
+		
+		e = (realv - intv)^2
+
+		
 	}
+	else e = 0
+	e
+}
+
+
+
+
+
+integrateInterpolationError <-function(x, v, base, sps, octants, sps_numb){
+	g = x[1:3]
 
 	e = 0
 
-	l = array(dim=0)
-	u = array(dim=0)
 
-	for(i in 1:3){
-		if(dimensions[i] == 1){
-			l = c(l,lowerLimit[i])
-			u = c(u,upperLimit[i])
+
+	s = 1
+	for(i in 1:length(sps_numb)){
+		sps_octant = sps[s:sps_numb[i],]
+		octant = c(octants[i,])
+		s = s + sps_numb[i]
+
+		lowerLimit = c(headerGj[base[1]], headerGk[base[2]], headerCosrho[base[3]])
+		upperLimit = c(headerGj[base[1]+octant[1]], headerGk[base[2]+octant[2]], headerCosrho[base[3]+octant[3]])
+
+		#print(c("lower: ",lowerLimit))
+		#print(c("upper: ",upperLimit))
+
+		#r = adaptIntegrate(calculateInterpolationArea, lower=lowerLimit, upper=upperLimit, maxEval=30)
+		#a = abs(r$integral)
+		#print(c("AREA: ",a))
+		a = 1
+
+		if(a > 0){
+			r = adaptIntegrate(calculateInterpolationError, v=v, g=g, sps=sps_octant, base=base, lower=lowerLimit, upper=upperLimit, maxEval=30)
+			e = e+abs(r$integral)/a
 		}
 	}
-
-
-	#print("INTEGRATION")
-
-	r = adaptIntegrate(calculateInterpolationError, dimensions=dimensions, v=v, g=g, sps=sps, point=point, ul= u, lower = l, upper = u, maxEval=30)
-	#print(r)
-	e= r$integral
-	
+	#print(x)
+	#print(e)
 	e
 }
 	
 
-optimalBrainSurgery <- function(sps,point,lowerLimit,upperLimit){
+optimalBrainSurgery <- function(base, sps, octants, sps_numb){
 
-	start=c(1)
-	dimensions=c(0,0,0)
-	for(i in 1:3){
-		if(!is.nan(upperLimit[i])){
-			dimensions[i]=1
-			start = c(start,1)
-		}
-	}
-
-	print("parameters")
 	print(sps)
-	print(point)
-	print(lowerLimit)
-	print(upperLimit)
-	print(start)
+	print(octants)
+	print(sps_numb)
 
+	v = getValueThroughLimitingPoint(base)
 
-	par = optim(start,fn=integrateInterpolationError, dimensions=dimensions, sps=sps, point=point, lowerLimit=lowerLimit, upperLimit=upperLimit)$par
+	if(!is.nan(v)){
 
-	v=par[1]
-	g=c(0,0,0)
-	j = 2
-	for(i in 1:3){
-		if(dimensions[i]==1){
-			g[i] = par[j]
-			j=j+1
+		gr = c(0,0,0)
+		for(i in 1:nrow(sps)){
+			gr = gr + gradients[,sps[i,1],sps[i,2],sps[i,3]]
 		}
+		gr = gr / nrow(sps)
+
+		start=gr
+		print(c("START: ",start))
+		print(c("BASE V: ",v))
+
+		par = optim(start,fn=integrateInterpolationError, v = v, base=base, sps=sps, octants=octants, sps_numb=sps_numb)$par
+
+		g=par[1:3]
+
+		r = c(v,g)
 	}
+	else r = NaN
 
+	r
 
-	c(v,g)
+	
 
 }
 
 
+getSupportPointsForOctant <- function(base, octant){
+	sps = matrix(0,0,3)
+	invalid = FALSE
+	rawnan = 0
+	for(i in 0:octant[1])
+		for(j in 0:octant[2])
+			for(k in 0:octant[3]){
+				cgj = base[1] + i
+				cgk = base[2] + j
+				ccosrho = base[3] + k
+				if(!(cgj >=1 && cgj <=res_gj && cgk >=1 && cgk <=res_gk && ccosrho >=1 && ccosrho <=res_cosrho)){
+					invalid = TRUE
+				}
+				else
+				if(!is.nan(data_raw[cgj,cgk,ccosrho])){
+					sps = rbind(sps, matrix(c(cgj,cgk,ccosrho),1,3))
+				}
+			}
+
+	if(invalid) sps = matrix(0,0,3)
+
+	sps
+}
+
+
+getValueThroughLimitingPoint <- function(base){
+	in_gj = base[1]
+	in_gk = base[2]
+	in_cosrho = base[3]
+
+	lengths=c(abs(headerGj[2]-headerGj[1]),abs(headerGk[2]-headerGk[1]),abs(headerCosrho[2]-headerCosrho[1]))
+	
+	lambda_j = acos(headerGj[in_gj])
+	lambda_k = acos(headerGk[in_gk])
+	rho = acos(headerCosrho[in_cosrho])
+
+	v = 0
+	cv = 0
+	w_sum = 0
+
+	if(in_gj+1 <= res_gj && !is.nan(data_raw[in_gj+1,in_gk,in_cosrho])){
+		limit = cos(rho+lambda_k)
+		f = ((pi/2 - data_raw[in_gj+1,in_gk,in_cosrho]) / (limit - headerGj[in_gj+1])) * lengths[1] + data_raw[in_gj+1,in_gk,in_cosrho]
+		w = abs(limit - headerGj[in_gj+1])
+		v = v + f * w
+		w_sum = w_sum + w
+		cv = cv + 1
+		print(c(f,w,w_sum))
+	}
+
+	if(in_gj-1 >= 1 && !is.nan(data_raw[in_gj-1,in_gk,in_cosrho]) && !(acos(gk)>acos(gj)+acos(cosrho)) && !(acos(gj)>acos(gk)+acos(cosrho))){
+		limit = cos(rho-lambda_k)
+		f = ((-pi/2 - data_raw[in_gj-1,in_gk,in_cosrho]) / (limit - headerGj[in_gj-1])) * lengths[1] + data_raw[in_gj-1,in_gk,in_cosrho]
+		w = abs(limit - headerGj[in_gj-1])
+		v = v + f * w
+		w_sum = w_sum + w
+		cv = cv + 1
+		print(c(f,w,w_sum))
+	}
+
+	
+	if(in_gk+1 <= res_gk && !is.nan(data_raw[in_gj,in_gk+1,in_cosrho])){
+		limit = cos(rho+lambda_j)
+		f = ((pi/2 - data_raw[in_gj,in_gk+1,in_cosrho]) / (limit - headerGk[in_gk+1])) * lengths[2] + data_raw[in_gj,in_gk+1,in_cosrho]
+		w = abs(limit - headerGk[in_gk+1])
+		v = v + f * w
+		w_sum = w_sum + w
+		cv = cv + 1
+		print(c(f,w,w_sum))
+	}
+
+	if(in_gk-1 >= 1 && !is.nan(data_raw[in_gj,in_gk-1,in_cosrho]) && !(acos(gk)>acos(gj)+acos(cosrho)) && !(acos(gj)>acos(gk)+acos(cosrho))){
+		limit = cos(rho-lambda_j)
+		f = ((pi/2 - data_raw[in_gj,in_gk-1,in_cosrho]) / (limit - headerGk[in_gk-1])) * lengths[2] + data_raw[in_gj,in_gk-1,in_cosrho]
+		w = abs(limit - headerGk[in_gk-1])
+		v = v + f * w
+		w_sum = w_sum + w
+		cv = cv + 1
+		print(c(f,w,w_sum))
+	}
+
+	if(in_cosrho+1 <= res_cosrho && !is.nan(data_raw[in_gj,in_gk,in_cosrho+1])){
+		limit = cos(lambda_j+lambda_k)
+		f = ((pi/2 - data_raw[in_gj,in_gk,in_cosrho+1]) / (limit - headerCosrho[in_cosrho+1])) * lengths[3] + data_raw[in_gj,in_gk,in_cosrho+1]
+		w = abs(limit - headerCosrho[in_cosrho+1])
+		v = v + f * w
+		w_sum = w_sum + w
+		cv = cv + 1
+		print(c(f,w,w_sum))
+	}
+
+	if(in_cosrho-1 >= 1 && !is.nan(data_raw[in_gj,in_gk,in_cosrho-1])){
+		if(lambda_j > lambda_k){
+			limit = cos(lambda_j-lambda_k)
+			f = ((pi/2 - data_raw[in_gj,in_gk,in_cosrho-1]) / (limit - headerCosrho[in_cosrho-1])) * lengths[3] + data_raw[in_gj,in_gk,in_cosrho-1]
+			w = abs(limit - headerCosrho[in_cosrho-1])
+			v = v + f * w
+			w_sum = w_sum + w
+			cv = cv + 1
+			print(c(f,w,w_sum))
+		}
+		else{
+			limit = cos(lambda_k-lambda_k)
+			f = ((-pi/2 - data_raw[in_gj,in_gk,in_cosrho-1]) / (limit - headerCosrho[in_cosrho-1])) * lengths[3] + data_raw[in_gj,in_gk,in_cosrho-1]
+			w = abs(limit - headerCosrho[in_cosrho-1])
+			v = v + f * w
+			w_sum = w_sum + w
+			cv = cv + 1
+			print(c(f,w,w_sum))
+		}
+	}
+
+
+	if(cv >= 1){
+		v = v / w_sum
+	}
+	else v = NaN
+	v
+}
 
 
 insertLimitInterpolationPoints <-function(){
-	data_fixed=data
+
 	gradients_fixed=gradients
 	for(i_gj in 0:(res_gj-1)){
 		in_gj = i_gj+1
@@ -519,111 +709,42 @@ insertLimitInterpolationPoints <-function(){
 				cosrho = (max_cosrho-min_cosrho) * i_cosrho/(res_cosrho-1) + min_cosrho
 				in_cosrho = i_cosrho+1
 
-				if(in_gj==1 && in_gk==9 && in_cosrho==11)
-				if(is.nan(data[in_gj, in_gk, in_cosrho]) && !in_gj==in_gk && !(in_cosrho==1 || in_cosrho==res_cosrho)){
+				if(is.nan(data[in_gj, in_gk, in_cosrho])){
 					print(c("FOUND NAN:",in_gj, in_gk, in_cosrho))
 
-					upperLimit = c(NaN,NaN,NaN)
-					lowerLimit = c(NaN,NaN,NaN)
-					sps = array(dim=c(0,3))
-					point = matrix(c(in_gj, in_gk, in_cosrho),1,3)
-					case0=FALSE
-					case1=FALSE
-					if(in_gj+1 <= res_gj && !is.nan(data[in_gj+1,in_gk,in_cosrho])){
-						sp = c(in_gj+1, in_gk, in_cosrho)
-						sps = rbind(sps, matrix(sp,1,3))
-						rho = acos(cosrho)
-						if(isWithinNumericalLimits(rho,0)) rho=MINISCULE
-						lambda_k = acos(gk)
-						upperLimit[1] = cos(rho+lambda_k)
-						lowerLimit[1]= headerGj[in_gj+1]
-						case0 = TRUE
-						
-						
-						print("CASE 0")
-					}
+					base = c(in_gj, in_gk, in_cosrho)
 
-					if(in_gj-1 >= 1 && !is.nan(data[in_gj-1,in_gk,in_cosrho]) && !(acos(gk)>acos(gj)+acos(cosrho)) && !(acos(gj)>acos(gk)+acos(cosrho))){
-						sp = c(in_gj-1, in_gk, in_cosrho)
-						sps = rbind(sps, matrix(sp,1,3))
-						rho = acos(cosrho)
-						if(isWithinNumericalLimits(rho,0)) rho=MINISCULE
-						lambda_k = acos(gk)
-						upperLimit[1] = cos(rho-lambda_k)
-						lowerLimit[1]= headerGj[in_gj-1]
-						case0 = TRUE
-						print("CASE 1")
-					}
+					sps = matrix(0,0,3)
+					octants = matrix(0,0,3)
+					sps_numb = c()
 
-					
-					if(in_gk+1 <= res_gk && !is.nan(data[in_gj,in_gk+1,in_cosrho])){
-						sp = c(in_gj, in_gk+1, in_cosrho)
-						sps = rbind(sps, matrix(sp,1,3))
-						rho = acos(cosrho)
-						if(isWithinNumericalLimits(rho,0)) rho=MINISCULE
-						lambda_j = acos(gj)
-						upperLimit[2] = cos(rho+lambda_j)
-						lowerLimit[2]= headerGk[in_gk+1]
-						case1 = TRUE
-						print("CASE 2")
-					}
+					for(i in c(-1,1))
+						for(j in c(-1,1))
+							for(k in c(-1,1)){
+								octant = c(i,j,k)
+								tsps = getSupportPointsForOctant(base, octant)
+								if(nrow(tsps)>0){
+									sps_numb = c(sps_numb,nrow(tsps))
+									octants = rbind(octants,matrix(octant,1,3))
+									sps = rbind(sps,tsps)
+								}
+								
+							}
 
-					if(in_gk-1 >= 1 && !is.nan(data[in_gj,in_gk-1,in_cosrho]) && !(acos(gk)>acos(gj)+acos(cosrho)) && !(acos(gj)>acos(gk)+acos(cosrho))){
-						sp = c(in_gj, in_gk-1, in_cosrho)
-						sps = rbind(sps, matrix(sp,1,3))
-						rho = acos(cosrho)
-						if(isWithinNumericalLimits(rho,0)) rho=MINISCULE
-						lambda_j = acos(gj)
-						upperLimit[2] = cos(rho-lambda_j)
-						lowerLimit[2]= headerGk[in_gk-1]
-						case0 = TRUE
-						print("CASE 3")
-					}
-
-					if(in_cosrho+1 <= res_cosrho && !is.nan(data[in_gj,in_gk,in_cosrho+1])){
-						sp = c(in_gj, in_gk, in_cosrho+1)
-						sps = rbind(sps, matrix(sp,1,3))
-						lambda_j = acos(gj)
-						lambda_k = acos(gk)
-						upperLimit[3] = cos(lambda_j+lambda_k)
-						lowerLimit[3] = headerCosrho[in_cosrho+1]
-						case0 = TRUE
-						print("CASE 4")
-					}
-
-					if(in_cosrho-1 >= 1 && !is.nan(data[in_gj,in_gk,in_cosrho-1])){
-						sp = c(in_gj, in_gk, in_cosrho-1)
-						sps = rbind(sps, matrix(sp,1,3))
-						lambda_j = acos(gj)
-						lambda_k = acos(gk)
-						if(lambda_j > lambda_k){
-							upperLimit[3] = cos(lambda_j-lambda_k)
-							lowerLimit[3] = headerCosrho[in_cosrho-1]
-							case0 = TRUE
-						print("CASE 5")
-						}
-						else{
-							upperLimit[3] = cos(lambda_k-lambda_k)
-							lowerLimit[3] = headerCosrho[in_cosrho-1]
-							case1 = TRUE
-						print("CASE 6")
+					if(nrow(sps)>0){
+						par = optimalBrainSurgery(base, sps, octants, sps_numb)
+						print(par)
+						if(!is.nan(par[1])){
+							if(max(par)==1 || sqrt(dot(par[2:4],par[2:4]))>30){
+								print("OPTIMISATION PROBLEM")
+								#stop(2)
+							}
+							data[in_gj, in_gk, in_cosrho] <<- par[1]
+							gradients[,in_gj, in_gk, in_cosrho] <<- par[2:4]
 						}
 					}
 
-					par = optimalBrainSurgery(sps,point, lowerLimit, upperLimit)
-					print(par)
-					if(max(par)==1){
-						print("JAJA")
-						stop(2)
-					}
-					data_fixed[in_gj, in_gk, in_cosrho] = par[1]
-					gradients[,in_gj, in_gk, in_cosrho] = par[2:4]
 
-
-					if(case0 && case1){
-						print(c("ABORT", in_gj, in_gk, in_cosrho))
-						stop("ABORT")
-					}
 
 
 					
@@ -631,8 +752,6 @@ insertLimitInterpolationPoints <-function(){
 			}
 		}
 	}
-
-	data <<- data_fixed
 
 }
 
@@ -679,34 +798,59 @@ saveTable <-function(filename, dimensions, headerGj, headerGk, headerCosrho, tbl
 
 
 
-if(FALSE){
+if(REHASH){
 for(i_gj in 0:(res_gj-1)){
+#i_gj=11
+#{
 	print(c(round(100*i_gj/(res_gj)),"% completed"))
+
 	gj = max_gj*i_gj/(res_gj-1)
+	#gj = log(parameter_gj_log*max_gj*i_gj/(res_gj-1)+1) / log(parameter_gj_log*max_gj*(res_gj-1)/(res_gj-1)+1)
 
 	headerGj[i_gj+1]=gj
 
-	#if(isWithinNumericalLimits(gj,0)) gj=MINISCULE
 
-	#iterate over gk angles
+
+
+	#iterate over gk intrusions
 	for(i_gk in 0:(res_gk-1)){
+	#i_gk=3
+	#{
 
-		gk = (i_gk * (max_gk)/(res_gk-1))
+		gk = max_gk*i_gk/(res_gk-1)
+		#gk = log(parameter_gk_log*max_gk*i_gk/(res_gk-1)+1) / log(parameter_gk_log*max_gk*(res_gj-1)/(res_gk-1)+1)
 
 		headerGk[i_gk+1]=gk
 
-		#if(isWithinNumericalLimits(gk,0)) gk=MINISCULE
+
 
 		for(i_cosrho in 0:(res_cosrho-1)){
-			cosrho = (max_cosrho-min_cosrho) * i_cosrho/(res_cosrho-1) + min_cosrho
+		#i_cosrho=11
+		#{
+
+			#print(c("I:",i_gj,i_gk,i_cosrho))
+
+			cosrho = max_cosrho-min_cosrho * i_cosrho/(res_cosrho-1) + min_cosrho
+
+
 
 			headerCosrho[i_cosrho+1]=cosrho
 
 			#if(isWithinNumericalLimits(cosrho,-1)) cosrho= -1+MINISCULE
 
-			d = calculatePHI(gj,gk,cosrho)
-			data[i_gj+1 ,i_gk+1 ,i_cosrho+1] = d
+			#d = calculatePHI(gj,gk,cosrho)
+			d = calculatePHI(headerGj[i_gj+1],headerGk[i_gk+1],headerCosrho[i_cosrho+1])
+			#print(c(i_gj,i_gk,i_cosrho,d))
 
+			if(is.nan(d)){
+				print(c(i_gj,i_gk,i_cosrho,gj,gk,cosrho))
+				stop("ABORT")
+			}
+			data[i_gj+1 ,i_gk+1 ,i_cosrho+1] = d
+			data_raw[i_gj+1 ,i_gk+1 ,i_cosrho+1] = d
+
+
+			if(DERIVATIVES){
 			modeGj="central"
 			modeGk="central"
 			modeCosrho="central"
@@ -732,6 +876,7 @@ for(i_gj in 0:(res_gj-1)){
 			if(is.nan(d)) h = NaN
 			else h = hessian(calculatePHI, gj, gk, cosrho, modeGj, modeGk, modeCosrho)
 			hessians[,,i_gj+1, i_gk+1, i_cosrho+1] = h
+			}
 
 		}
 	}
@@ -739,8 +884,7 @@ for(i_gj in 0:(res_gj-1)){
 print(c(100,"% completed"))
 }
 
-insertLimitInterpolationPoints()
-
+#insertLimitInterpolationPoints()
 
 
 #source("floatconversion.R")
