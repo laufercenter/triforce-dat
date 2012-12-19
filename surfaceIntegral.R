@@ -456,10 +456,10 @@ isWithinLimitsConcave <-function(PHI, psi, lambda){
 	valid=TRUE
 
 	#if the integration origin is inside the circular area, we have to be careful how the integration limits are set
-	if(psi<=lambda){
-		valid=FALSE
+	#if(psi<=lambda){
+	#	valid=FALSE
 	
-	}
+	#}
 	#else{
 		#if(PHI2HalfSphereAngle(PHI,psi,lambda)-THRESHOLD_NUMERICAL > pi/2){
 		#	valid=FALSE
@@ -505,13 +505,31 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 
 
 			#calculations for convex arcs
-			if(phi<=pi/2){
-				A = A + abs(integrate(arcConvex,lower=0,upper=phi,psi=psi,lambda=lambda)$val)
+			#if(phi<=pi/2){
+			#	A = A + abs(integrate(arcConvex,lower=0,upper=phi,psi=psi,lambda=lambda)$val)
+			#}
+			#else{
+			#	A = A + abs(integrate(arcConvex,lower=0,upper=pi/2,psi=psi,lambda=lambda)$val)
+			#	A = A + abs(integrate(arcConcave,lower=pi/2,upper=pi-phi,psi=psi,lambda=lambda)$val)
+			#}
+
+
+
+
+			if(phi>=pi/2){
+				A = A + abs(integrate(arcConcave,lower=phi,upper=pi,psi=psi,lambda=lambda)$val)
 			}
 			else{
-				A = A + abs(integrate(arcConvex,lower=0,upper=pi/2,psi=psi,lambda=lambda)$val)
-				A = A + abs(integrate(arcConcave,lower=pi/2,upper=pi-phi,psi=psi,lambda=lambda)$val)
+				A = A + abs(integrate(arcConcave,lower=pi/2,upper=pi,psi=psi,lambda=lambda)$val)
+				A = A + abs(integrate(arcConvex,lower=phi,upper=pi/2,psi=psi,lambda=lambda)$val)
 			}
+
+
+
+
+
+
+
 		#}
 		
 	}
@@ -543,15 +561,26 @@ integralConvex <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 			#print(c("row1",phi,phiLimit,PHILimit))
 
 			#for the convex case
-			if(PHI < PHILimit){
-				A = A - abs(integrate(arcConcave,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
-				#print(abs(integrate(arcConcave,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val))
+			#if(PHI < PHILimit){
+			#	A = A - abs(integrate(arcConcave,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
+			#	#print(abs(integrate(arcConcave,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val))
+			#	ip=phiLimit
+			#}
+			#else ip=phi
+
+			
+			#A = A + abs(integrate(arcConvex,lower=0,upper=ip,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
+			#print(abs(integrate(arcConvex,lower=0,upper=ip,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
+
+
+			if(PHI > PHILimit){
+				A = A + abs(integrate(arcConvex,lower=phi,upper=phiLimit,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
 				ip=phiLimit
 			}
 			else ip=phi
 			
-			A = A + abs(integrate(arcConvex,lower=0,upper=ip,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
-			#print(abs(integrate(arcConvex,lower=0,upper=ip,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
+			A = A - abs(integrate(arcConcave,lower=0,upper=ip,psi=psi,lambda=lambda, stop.on.error=FALSE)$val)
+
 		#}
 	}
 	A
@@ -573,23 +602,20 @@ integralConcave <-function(PHI, psi, lambda, modePHI, modepsi, modelambda, i){
 	#if the integration origin is inside the circular area, we have to be careful how the integration limits are set
 	if(psi<lambda){
 
-			#phiLimit = phiLimitPlain(psi,lambda)
+
+			phiLimit = phiLimitPlain(psi,lambda)
 		
-			#if(PHI==0) phi=pi
-
-			#print(c("row0",phi,phiLimit))
+			if(PHI==0) phi=pi
 
 
-			#calculations for convex arcs
-			#if(phi>=pi/2){
-			#	A = A + abs(integrate(arcConcave,lower=phi,upper=pi,psi=psi,lambda=lambda)$val)
-			#}
-			#else{
-			#	A = A + abs(integrate(arcConcave,lower=pi/2,upper=pi,psi=psi,lambda=lambda)$val)
-			#	A = A + abs(integrate(arcConvex,lower=phi,upper=pi/2,psi=psi,lambda=lambda)$val)
-			#}
+			if(phi>=pi/2){
+				A = A + abs(integrate(arcConcave,lower=phi,upper=pi,psi=psi,lambda=lambda)$val)
+			}
+			else{
+				A = A + abs(integrate(arcConcave,lower=pi/2,upper=pi,psi=psi,lambda=lambda)$val)
+				A = A + abs(integrate(arcConvex,lower=phi,upper=pi/2,psi=psi,lambda=lambda)$val)
+			}
 
-			A = NaN
 	
 	}
 	else{
