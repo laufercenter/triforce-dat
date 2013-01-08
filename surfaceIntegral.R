@@ -14,7 +14,7 @@
 
 FAILSAFE=TRUE
 
-DODERIVATIVES=TRUE
+DODERIVATIVES=FALSE
 
 
 #the resolution of our grid
