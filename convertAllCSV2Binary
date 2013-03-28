@@ -5,6 +5,5 @@
 ./convertCSV2Binary.py dataConcave0.csv dataConcave0.dat
 ./convertCSV2Binary.py dataConcave1.csv dataConcave1.dat
 ./convertCSV2Binary.py dataConcave2.csv dataConcave2.dat
-./convertCSV2Binary.py depthBufferForward.csv depthBufferForward.dat
-./convertCSV2Binary.py depthBufferBackward.csv depthBufferBackward.dat
+./convertCSV2Binary.py depthBuffer.csv depthBuffer.dat
 

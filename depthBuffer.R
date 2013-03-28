@@ -1,31 +1,31 @@
 
-resolution= 10
+resolution= 25
 grid=12
 
 res_lambda = grid
 res_psi = grid
-res_phi = resolution
+res_g = resolution
 
 #limits for the parameters
 max_lambda = pi/2
 max_psi = pi
-max_phi = pi
+max_g = 1
 
 dimensions=3
 
 
 
 
-saveTable <-function(filename, dimensions, headerPhi, headerPsi, headerLambda, tbl){
+saveTable <-function(filename, dimensions, headerG, headerPsi, headerLambda, tbl){
 
 	DERIVATIVE_LEVEL = 0
 	STORE_PHI = 0
-	headerPhidat = array(0,dim=c(8,length(headerPhi)))
+	headerGdat = array(0,dim=c(8,length(headerG)))
 	headerPsidat = array(0,dim=c(8,length(headerPsi)))
 	headerLambdadat = array(0,dim=c(8,length(headerLambda)))
 	tbldat = array(0,dim=c(8,length(tbl)))
-	for(i in 1:length(headerPhi)){
-		headerPhidat[,i] = double2CharArray(headerPhi[i])
+	for(i in 1:length(headerG)){
+		headerGdat[,i] = double2CharArray(headerG[i])
 	}
 	for(i in 1:length(headerPsi)){
 		headerPsidat[,i] = double2CharArray(headerPsi[i])
@@ -40,8 +40,8 @@ saveTable <-function(filename, dimensions, headerPhi, headerPsi, headerLambda, t
 	write(file=filename,DERIVATIVE_LEVEL, append=FALSE)
 	write(file=filename,STORE_PHI, append=TRUE)
 	write(file=filename,3,append=TRUE)
-	write(file=filename,c(1,res_phi,1,res_psi,1,res_lambda),ncol=3,append=TRUE)
-	write(file=filename,headerPhidat,ncol=8,append=TRUE)
+	write(file=filename,c(1,res_g,1,res_psi,1,res_lambda),ncol=3,append=TRUE)
+	write(file=filename,headerGdat,ncol=8,append=TRUE)
 	write(file=filename,headerPsidat,ncol=8,append=TRUE)
 	write(file=filename,headerLambdadat,ncol=8,append=TRUE)
 	write(file=filename,tbldat,ncol=8,append=TRUE)
@@ -59,140 +59,44 @@ cot <- function(x){
 }
 
 
-phiLimitPlain <-function(psi,lambda){
-	if(lambda==0) limit=0
-	else if(psi==0) limit=pi/2
-	else if(psi<=lambda) limit=pi/2
-	else if(psi+lambda>=pi) limit=pi/2
-	else {
-		if(psi>pi/2) psi=pi-psi
-
-		x = (cos(lambda)^2-cos(psi)^2) * csc(psi)^2
-		if(x<0){
-			print(c("INVALID LIMIT, REPLACING ",x," WITH 0 ",lambda,psi,cos(lambda)^2,cos(psi)^2,csc(psi)^2))
-			x=0
-		}
-		limit=acos(sqrt(x))
-	}
-	limit
+kappa <- function(g, psi, lambda){
+	if(abs(g)==1) g=g*0.999
+	a = ((cos(lambda) - g*cos(psi)) * csc(psi)) / (sqrt(1-g^2))
+	if(abs(a)>1) res = NaN
+	else res= acos(a)
+	res
 }
 
 
-
-#gives theta values dependent on phi, psi and lambda angles for a convex spherical arc
-thetaConvex <- function(phi, psi, lambda){
-	phi=abs(phi)
-
-	if(lambda==0){
-		v = 0
-	}
-	else{
-		s = cos(phi)^2 * sin(psi)^2 * (-cos(lambda)^2+cos(psi)^2+cos(phi)^2 * sin(psi)^2)
-		if(s<0){
-			print(c("perturbation error: s=",s))
-			s = 0
-		}
-		a = (cos(lambda) * cos(psi)-sqrt(s))/(cos(psi)^2+cos(phi)^2 * sin(psi)^2)
-		if(abs(a)>1){
-			print(c("boundary error: a=",a))
-			a = sign(a)
-		}
-		v = acos(a)
-	}
-
-	v
-}
-
-#gives theta values dependent on phi, psi and lambda angles for a concave spherical arc
-thetaConcave <- function(phi, psi, lambda){
-	phi=abs(phi)
-	if(lambda==0){
-		v = 0
-	}
-	else{
-		s = cos(phi)^2 * sin(psi)^2 * (-cos(lambda)^2+cos(psi)^2+cos(phi)^2 * sin(psi)^2)
-		if(s<0){
-			print(c("perturbation error: s=",s))
-			s = 0
-		}
-		a = (cos(lambda) * cos(psi)+sqrt(s))/(cos(psi)^2+cos(phi)^2 * sin(psi)^2)
-		if(abs(a)>1){
-			print(c("boundary error: a=",a))
-			a=sign(a)
-		}
-		
-		v = acos(a)
-	}
-
-
-
-	v
-}
-
-
-
-
-
-calculateDepth <- function(phi, psi, lambda){
-	phi=abs(phi)
-
-	if(psi<lambda){
-		if(phi <= phiLimitPlain(psi,lambda)){
-			forw = thetaConvex(phi, psi, lambda)
-			backw = 2*pi - thetaConcave(phi+pi, psi, lambda)
-		}
-		else{
-			forw = thetaConcave(phi, psi, lambda)
-			backw = 2*pi - thetaConvex(phi+pi, psi, lambda)
-		}
-	}
-	else if(psi+lambda >= pi){
-		if(phi <= phiLimitPlain(psi,lambda)){
-			forw = thetaConcave(phi, psi, lambda)
-			backw = 2*pi - thetaConvex(phi+pi, psi, lambda)
-		}
-		else{
-			forw = thetaConvex(phi, psi, lambda)
-			backw = 2*pi - thetaConcave(phi+pi, psi, lambda)
-		}
-	}
-	else{
-		if(phi <= phiLimitPlain(psi,lambda)){
-			forw = thetaConcave(phi, psi, lambda)
-			backw = thetaConvex(phi, psi, lambda)
-		}
-		else{
-			forw=NaN
-			backw=NaN
-		}
+calculateDepth <-function(g,psi,lambda){
+	k=kappa(g, psi, lambda)
+	if(is.nan(k)){
+		if(psi>pi/2) q = -1
+		else q = 1
+		m = q*cos(lambda)*cos(psi)
+		if(psi<lambda && g>m) depth = pi
+		else if(psi+lambda>pi && g<m) depth=pi
+		else depth=0
 			
 	}
+	else depth=k
 	
-	c(forw,backw)
+	depth
 }
+
 
 
 draw <-function(psi,lambda){
-	plot(dataForward[,psi,lambda],type="l",ylim=c(0,2*pi))
-	lines(dataBackward[,psi,lambda],ylim=c(0,2*pi))
-}
-
-drawf <-function(psi,lambda){
-	plot(dataForward[,psi,lambda],type="l",ylim=c(0,2*pi))
-}
-
-drawb <-function(psi,lambda){
-	plot(dataBackward[,psi,lambda],type="l",ylim=c(0,2*pi))
+	plot(data[,psi,lambda],type="l",ylim=c(0,pi))
 }
 
 
 
-dataForward = array(0,dim=c(res_phi,res_psi,res_lambda))
-dataBackward = array(0,dim=c(res_phi,res_psi,res_lambda))
+data = array(0,dim=c(res_g,res_psi,res_lambda))
 
 headerLambda=array(0,dim=c(res_lambda))
 headerPsi=array(0,dim=c(res_psi))
-headerPhi=array(0,dim=c(res_phi))
+headerG=array(0,dim=c(res_g))
 
 
 
@@ -209,10 +113,10 @@ for(i_psi in 0:(res_psi-1)){
 	headerPsi[i_psi+1]=psi
 }
 
-for(i_phi in 0:(res_phi-1)){
+for(i_g in 0:(res_g-1)){
 
-	phi = (i_phi * (max_phi)/(res_phi-1)) -(pi/2)
-	headerPhi[i_phi+1]=phi
+	g = (i_g * (max_g*2)/(res_g-1)) -1
+	headerG[i_g+1]=g
 }
 
 
@@ -226,11 +130,10 @@ for(i_lambda in 0:(res_lambda-1)){
 	for(i_psi in 0:(res_psi-1)){
 		psi = (i_psi * (max_psi)/(res_psi-1))
 		
-		for(i_phi in 0:(res_phi-1)){
-		phi = (i_phi * (max_phi)/(res_phi-1)) - (pi/2)
-			d = calculateDepth(phi,psi,lambda)
-			dataForward[i_phi+1, i_psi+1, i_lambda+1] = d[1]
-			dataBackward[i_phi+1, i_psi+1, i_lambda+1] = d[2]
+		for(i_g in 0:(res_g-1)){
+		g = (i_g * (max_g*2)/(res_g-1)) - 1
+			d = calculateDepth(g,psi,lambda)
+			data[i_g+1, i_psi+1, i_lambda+1] = d
 		}
 		
 		
@@ -239,8 +142,7 @@ for(i_lambda in 0:(res_lambda-1)){
 print(c(100,"% completed"))
 
 source("floatconversion.R")
-saveTable("depthBufferForward.csv",c(res_phi,res_psi,res_lambda),headerPhi, headerPsi, headerLambda, dataForward)
-saveTable("depthBufferBackward.csv",c(res_phi,res_psi,res_lambda),headerPhi, headerPsi, headerLambda, dataBackward)
+saveTable("depthBuffer.csv",c(res_g,res_psi,res_lambda),headerG, headerPsi, headerLambda, data)
 
 
 
