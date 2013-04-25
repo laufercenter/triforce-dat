@@ -12,15 +12,14 @@
 #   +                     +
 
 
-FAILSAFE=TRUE
-
-DODERIVATIVES=FALSE
-
+DERIVATIVE_LEVEL=2
+STORE_PHI=1
 
 #the resolution of our grid
-res_lambda = 24
-res_psi = 24
-res_PHI = 24
+grid=20
+res_lambda = grid
+res_psi = grid
+res_PHI = grid
 
 #limits for the parameters
 max_lambda = pi/2
@@ -28,7 +27,7 @@ max_psi = pi
 max_PHI = pi
 
 dimensions=3
-fd=0.025
+fd=0.00025
 
 
 ex = matrix(c(1,0,0),3,1)
@@ -41,14 +40,16 @@ THRESHOLD_NUMERICAL = 0.0001
 nOrigin = matrix(c(0,0,1),3,1)
 
 
-saveTable <-function(filename, dimensions, headerPHI, headerPsi, headerLambda, tbl, tblgradients, tblhessians){
+saveTable <-function(filename, dimensions, headerPHI, headerPsi, headerLambda, tbl, tblgradients, tblhessians, tblphi){
 
+	
 	headerPHIdat = array(0,dim=c(8,length(headerPHI)))
 	headerPsidat = array(0,dim=c(8,length(headerPsi)))
 	headerLambdadat = array(0,dim=c(8,length(headerLambda)))
 	tbldat = array(0,dim=c(8,length(tbl)))
 	tblgradientsdat = array(0,dim=c(8,length(tblgradients)))
 	tblhessiansdat = array(0,dim=c(8,length(tblhessians)))
+	tblphidat = array(0,dim=c(8,length(tblphi)))
 	for(i in 1:length(headerPHI)){
 		headerPHIdat[,i] = double2CharArray(headerPHI[i])
 	}
@@ -61,21 +62,30 @@ saveTable <-function(filename, dimensions, headerPHI, headerPsi, headerLambda, t
 	for(i in 1:length(tbl)){
 		tbldat[,i] = double2CharArray(tbl[i])
 	}
-	for(i in 1:length(tblgradients)){
-		tblgradientsdat[,i] = double2CharArray(tblgradients[i])
-	}
-	for(i in 1:length(tblhessians)){
-		tblhessiansdat[,i] = double2CharArray(tblhessians[i])
-	}
+	if(DERIVATIVE_LEVEL>=2)
+		for(i in 1:length(tblgradients)){
+			tblgradientsdat[,i] = double2CharArray(tblgradients[i])
+		}
+	if(DERIVATIVE_LEVEL>=3)
+		for(i in 1:length(tblhessians)){
+			tblhessiansdat[,i] = double2CharArray(tblhessians[i])
+		}
+	if(STORE_PHI==1)
+		for(i in 1:length(tblphi)){
+			tblphidat[,i] = double2CharArray(tblphi[i])
+		}
 
-	write(file=filename,3,append=FALSE)
+	write(file=filename,DERIVATIVE_LEVEL, append=FALSE)
+	write(file=filename,STORE_PHI, append=TRUE)
+	write(file=filename,3,append=TRUE)
 	write(file=filename,c(1,res_PHI,1,res_psi,1,res_lambda),ncol=3,append=TRUE)
 	write(file=filename,headerPHIdat,ncol=8,append=TRUE)
 	write(file=filename,headerPsidat,ncol=8,append=TRUE)
 	write(file=filename,headerLambdadat,ncol=8,append=TRUE)
 	write(file=filename,tbldat,ncol=8,append=TRUE)
-	write(file=filename,tblgradientsdat,ncol=8,append=TRUE)
-	write(file=filename,tblhessiansdat,ncol=8,append=TRUE)
+	if(DERIVATIVE_LEVEL>=2) write(file=filename,tblgradientsdat,ncol=8,append=TRUE)
+	if(DERIVATIVE_LEVEL>=3) write(file=filename,tblhessiansdat,ncol=8,append=TRUE)
+	if(STORE_PHI==1) write(file=filename,tblphidat,ncol=8,append=TRUE)
 }
 
 
@@ -854,7 +864,7 @@ hessian <- function(integrator, PHI, psi, lambda, modePHI, modepsi, modelambda, 
 dataConvex = array(0,dim=c(res_PHI,res_psi,res_lambda))
 dataConcave = array(0,dim=c(res_PHI,res_psi,res_lambda))
 
-
+phiConcave = array(0,dim=c(res_PHI,res_psi,res_lambda))
 
 gradientsConvex = array(0,dim=c(dimensions, res_PHI,res_psi,res_lambda))
 hessiansConvex = array(0,dim=c(dimensions, dimensions, res_PHI,res_psi,res_lambda))
@@ -900,6 +910,29 @@ for(i_lambda in 0:(res_lambda-1)){
 		}
 	}
 }
+
+
+
+
+#and the phi values
+for(i_lambda in 0:(res_lambda-1)){
+	lambda = max_lambda*i_lambda/(res_lambda-1)
+	for(i_psi in 0:(res_psi-1)){
+		psi = (i_psi * (max_psi)/(res_psi-1))
+		for(i_PHI in 0:(res_PHI-1)){
+			PHI = max_PHI * i_PHI/(res_PHI-1)
+
+			phi = PHI2phi(PHI,psi,lambda)
+			if(psi<lambda) if(PHI==0) phi=pi
+
+			phiConcave[i_PHI+1, i_psi+1, i_lambda+1] = phi
+
+		
+		}
+	}
+}
+
+
 
 
 #iterate over lambda angles
@@ -1021,6 +1054,10 @@ for(i_lambda in 0:(res_lambda-1)){
 
 			if(is.nan(dconc) || !derivableConcave) gconc = NaN
 			else gconc = gradient(integralConcave,PHI_concave,psi_concave,lambda, modePHIConcave, modepsiConcave, modelambdaConcave)
+
+			#gconc[1] = max(min(gconc[1],1),-1)
+			#gconc[2] = max(min(gconc[2],1),-1)
+			#gconc[3] = max(min(gconc[3],1),-1)
 			gradientsConcave[,i_PHI+1, i_psi+1, i_lambda+1] = gconc
 
 			#print("hessiansConvex")
@@ -1031,9 +1068,12 @@ for(i_lambda in 0:(res_lambda-1)){
 
 			#print("hessiansConcave")
 
-			if(is.nan(dconc) || !derivableConcave) hconc = NaN
-			else hconc = hessian(integralConcave, PHI_concave, psi_concave, lambda, modePHIConcave, modepsiConcave, modelambdaConcave)
-			hessiansConcave[,,i_PHI+1, i_psi+1, i_lambda+1] = hconc
+			if(DERIVATIVE_LEVEL>=3){
+
+				if(is.nan(dconc) || !derivableConcave) hconc = NaN
+				else hconc = hessian(integralConcave, PHI_concave, psi_concave, lambda, modePHIConcave, modepsiConcave, modelambdaConcave)
+				hessiansConcave[,,i_PHI+1, i_psi+1, i_lambda+1] = hconc
+			}
 
 			#print("done")
 
@@ -1043,10 +1083,9 @@ for(i_lambda in 0:(res_lambda-1)){
 print(c(100,"% completed"))
 
 
-if(!DODERIVATIVES) print("we will not generate tables for derivatives")
-if(DODERIVATIVES) print("generating tables for derivatives")
 
-if(DODERIVATIVES){
+if(DERIVATIVE_LEVEL>=2){
+
 #build tables for the components of the gradient
 #iterate over lambda angles
 for(i_lambda in 0:(res_lambda-1)){
@@ -1147,10 +1186,12 @@ for(i_lambda in 0:(res_lambda-1)){
 		#		else gconv = gradient(gradientIntegralConvex,PHI_convex,psi_convex,lambda, modePHIConvex, modepsiConvex, modelambdaConvex,i_c)
 		#		gradientsGradientsConvex[i_c,,i_PHI+1, i_psi+1, i_lambda+1] = gconv
 		#	}
-			for(i_c in 1:3){
-				if(is.nan(dconc)) gconc = NaN
-				else gconc = gradient(gradientIntegralConcave,PHI_concave,psi_concave,lambda, modePHIConcave, modepsiConcave, modelambdaConcave,i_c)
-				gradientsGradientsConcave[i_c,,i_PHI+1, i_psi+1, i_lambda+1] = gconc
+			if(DERIVATIVE_LEVEL>=2){
+				for(i_c in 1:3){
+					if(is.nan(dconc)) gconc = NaN
+					else gconc = gradient(gradientIntegralConcave,PHI_concave,psi_concave,lambda, modePHIConcave, modepsiConcave, modelambdaConcave,i_c)
+					gradientsGradientsConcave[i_c,,i_PHI+1, i_psi+1, i_lambda+1] = gconc
+				}
 			}
 
 		#	for(i_c in 1:3){
@@ -1158,10 +1199,12 @@ for(i_lambda in 0:(res_lambda-1)){
 		#		else gconv = hessian(gradientIntegralConvex,PHI_convex,psi_convex,lambda, modePHIConvex, modepsiConvex, modelambdaConvex,i_c)
 		#		hessiansGradientsConvex[i_c,,,i_PHI+1, i_psi+1, i_lambda+1] = hconv
 		#	}
-			for(i_c in 1:3){
-				if(is.nan(dconc)) hconc = NaN
-				else hconc = hessian(gradientIntegralConcave,PHI_concave,psi_concave,lambda, modePHIConcave, modepsiConcave, modelambdaConcave,i_c)
-				hessiansGradientsConcave[i_c,,,i_PHI+1, i_psi+1, i_lambda+1] = hconc
+			if(DERIVATIVE_LEVEL>=3){
+				for(i_c in 1:3){
+					if(is.nan(dconc)) hconc = NaN
+					else hconc = hessian(gradientIntegralConcave,PHI_concave,psi_concave,lambda, modePHIConcave, modepsiConcave, modelambdaConcave,i_c)
+					hessiansGradientsConcave[i_c,,,i_PHI+1, i_psi+1, i_lambda+1] = hconc
+				}
 			}
 
 
@@ -1180,15 +1223,15 @@ print("saving data")
 source("floatconversion.R")
 
 #saveTable("dataConvex.csv",c(res_PHI,res_psi,res_lambda),headerPHIConvex, headerPsiConvex, headerLambdaConvex,dataConvex, gradientsConvex, hessiansConvex)
-saveTable("dataConcave.csv",c(res_PHI,res_psi,res_lambda),headerPHIConcave, headerPsiConcave, headerLambdaConcave,dataConcave, gradientsConcave, hessiansConcave)
+saveTable("dataConcave.csv",c(res_PHI,res_psi,res_lambda),headerPHIConcave, headerPsiConcave, headerLambdaConcave,dataConcave, gradientsConcave, hessiansConcave, phiConcave)
 
-if(DODERIVATIVES){
+#if(DODERIVATIVES){
 	print("saving derivatives and hessians")
 	for(i in 1:dimensions){
-		#saveTable(paste0("dataConvex",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headerPHIConvex, headerPsiConvex, headerLambdaConvex,gradientsConvex[i,,,], gradientsGradientsConvex[i,,,,], hessiansGradientsConvex[i,,,,,])
-		saveTable(paste0("dataConcave",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headerPHIConcave, headerPsiConcave, headerLambdaConcave,gradientsConcave[i,,,], gradientsGradientsConcave[i,,,,], hessiansGradientsConcave[i,,,,,])
+		saveTable(paste("dataConcave",(i-1),".csv", sep=""),c(res_PHI,res_psi,res_lambda),headerPHIConcave, headerPsiConcave, headerLambdaConcave,gradientsConcave[i,,,], gradientsGradientsConcave[i,,,,], hessiansGradientsConcave[i,,,,,], phiConcave)
 	}
-}
+		#saveTable(paste0("dataConvex",(i-1),".csv"),c(res_PHI,res_psi,res_lambda),headerPHIConvex, headerPsiConvex, headerLambdaConvex,gradientsConvex[i,,,], gradientsGradientsConvex[i,,,,], hessiansGradientsConvex[i,,,,,])
+#}
 
 
 #saveTableRaw("dataConvex.raw",c(res_PHI,res_psi,res_lambda),headers,dataConvex)

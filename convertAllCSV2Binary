@@ -6,4 +6,6 @@
 ./convertCSV2Binary.py dataConcave1.csv dataConcave1.dat
 ./convertCSV2Binary.py dataConcave2.csv dataConcave2.dat
 ./convertCSV2Binary.py depthBuffer.csv depthBuffer.dat
+./convertCSV2Binary.py occludedDistribution.csv occludedDistribution.dat
+./convertCSV2Binary.py exposedDistribution.csv exposedDistribution.dat
 

@@ -1,6 +1,6 @@
 
-resolution= 25
-grid=12
+resolution= 16
+grid=64
 
 res_lambda = grid
 res_psi = grid
@@ -9,10 +9,10 @@ res_g = resolution
 #limits for the parameters
 max_lambda = pi/2
 max_psi = pi
-max_g = 1
+max_g = 0.95
 
 dimensions=3
-
+MINISCULE=0.001
 
 
 
@@ -73,16 +73,18 @@ calculateDepth <-function(g,psi,lambda){
 	if(is.nan(k)){
 		if(psi>pi/2) q = -1
 		else q = 1
-		m = q*cos(lambda)*cos(psi)
-		if(psi<lambda && g>m) depth = pi
-		else if(psi+lambda>pi && g<m) depth=pi
-		else depth=0
+		m = q*abs(cos(lambda)*cos(psi))
+		
+		if(psi<lambda && g>m) depth = -1
+		else if(psi+lambda>pi && g<m) depth=-1
+		else depth=1000
 			
 	}
 	else depth=k
 	
 	depth
 }
+
 
 
 
@@ -115,11 +117,13 @@ for(i_psi in 0:(res_psi-1)){
 
 for(i_g in 0:(res_g-1)){
 
-	g = (i_g * (max_g*2)/(res_g-1)) -1
+	g = (i_g * (max_g*2)/(res_g-1)) -max_g
 	headerG[i_g+1]=g
 }
 
 
+
+print("creating depth-buffer information")
 for(i_lambda in 0:(res_lambda-1)){
 	lambda = max_lambda*i_lambda/(res_lambda-1)
 	
@@ -131,8 +135,30 @@ for(i_lambda in 0:(res_lambda-1)){
 		psi = (i_psi * (max_psi)/(res_psi-1))
 		
 		for(i_g in 0:(res_g-1)){
-		g = (i_g * (max_g*2)/(res_g-1)) - 1
+		
+			if(i_g>=1){
+				g0 = ((i_g-1) * (max_g*2)/(res_g-1)) - max_g
+				d0 = calculateDepth(g0,psi,lambda)
+			}
+			
+			
+			if(i_g<(res_g-1)){
+				g1 = ((i_g+1) * (max_g*2)/(res_g-1)) - max_g
+				d1 = calculateDepth(g1,psi,lambda)
+			}
+			
+			g = (i_g * (max_g*2)/(res_g-1)) - max_g
 			d = calculateDepth(g,psi,lambda)
+
+# 			if(d<0){
+# 				if(i_g>=1 && d0>0) d=pi-MINISCULE
+# 				else if(i_g<(res_g-1) && d1>0) d=pi-MINISCULE
+# 			}
+			if(d>2*pi){
+				if(i_g>=1 && d0<2*pi) d=0+MINISCULE
+				else if(i_g<(res_g-1) && d1<2*pi) d=0+MINISCULE
+			}
+			
 			data[i_g+1, i_psi+1, i_lambda+1] = d
 		}
 		
@@ -140,6 +166,8 @@ for(i_lambda in 0:(res_lambda-1)){
 	}
 }
 print(c(100,"% completed"))
+
+
 
 source("floatconversion.R")
 saveTable("depthBuffer.csv",c(res_g,res_psi,res_lambda),headerG, headerPsi, headerLambda, data)
