@@ -86,12 +86,12 @@ for(j in 1:(bins-1)) g1[j] = en1[j]/step
 
 
 pdf("surfacePointProbabilityDistributions.pdf");
-plot(ex,g1,type="l", ann=FALSE, ylim=c(0,4))
+plot(ex,g1,type="l", ann=FALSE)
 lines(ex,g0, pch=22, lty=2)
-title(main="surface-point probability distributions");
+title(main="boundary segment probability distributions");
 title(xlab="d (distance in radians)");
-title(ylab="probability");
-legend(2.1, 6.5, c("p(d|e=Exposed)","p(d|e=occluded)"), cex=0.8, lty=1:2);
+title(ylab="p(d|e)");
+legend(2.1, 8.2, c("p(d|e=exposed)","p(d|e=buried)"), cex=0.8, lty=1:2);
 
 dev.off()
 

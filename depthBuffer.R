@@ -1,5 +1,5 @@
 
-resolution= 16
+resolution= 1
 grid=64
 
 res_lambda = grid
