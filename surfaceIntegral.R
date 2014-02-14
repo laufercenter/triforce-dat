@@ -864,6 +864,7 @@ hessian <- function(integrator, PHI, psi, lambda, modePHI, modepsi, modelambda, 
 #empty grid data
 data = array(0,dim=c(res_PHI,res_psi,res_lambda))
 gradients = array(0,dim=c(dimensions, res_PHI,res_psi,res_lambda))
+hessians = array(0,dim=c(dimensions, dimensions, res_PHI,res_psi,res_lambda))
 
 dataConvex = array(0,dim=c(res_PHI,res_psi,res_lambda))
 dataConcave = array(0,dim=c(res_PHI,res_psi,res_lambda))
@@ -1260,6 +1261,7 @@ buildDerivatives<-function(){
 buildGRID(headerPHIConcave, headerPsiConcave, headerLambdaConcave)
 dataConcave = data
 gradientsConcave = gradients
+hessiansConcave = hessians
 
 buildGRID(headerPHICentroid, headerPsiCentroid, headerLambdaCentroid)
 dataCentroid = data
