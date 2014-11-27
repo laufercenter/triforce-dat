@@ -1,5 +1,5 @@
 
-resolution= 1
+resolution= 8
 grid=64
 
 res_lambda = grid
@@ -41,6 +41,7 @@ saveTable <-function(filename, dimensions, headerG, headerPsi, headerLambda, tbl
 	write(file=filename,STORE_PHI, append=TRUE)
 	write(file=filename,3,append=TRUE)
 	write(file=filename,c(1,res_g,1,res_psi,1,res_lambda),ncol=3,append=TRUE)
+	write(file=filename,1,append=TRUE)
 	write(file=filename,headerGdat,ncol=8,append=TRUE)
 	write(file=filename,headerPsidat,ncol=8,append=TRUE)
 	write(file=filename,headerLambdadat,ncol=8,append=TRUE)
