@@ -1,3 +1,10 @@
+#
+#	Copyright (c) 2009-2014 Nils J. D. Drechsel, Christopher J. Fennell, Ken A. Dill, Jordi Villà-Freixa
+#	Email: nils.drechsel@gmail.com
+#	License: MIT-license, which can be found in file LICENSE.txt as well as here: http://opensource.org/licenses/MIT
+#
+
+
 filename="artificialStructure.xyzr"
 box=c(500,50,50)
 radii=c(2.4,5.4)
